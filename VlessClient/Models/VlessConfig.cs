@@ -43,9 +43,6 @@ public class VlessConfig
     [JsonPropertyName("listenPort")]
     public int ListenPort { get; set; } = 10808;
 
-    [JsonPropertyName("httpPort")]
-    public int HttpPort { get; set; } = 10809;
-
     [JsonPropertyName("rejectUnauthorized")]
     public bool RejectUnauthorized { get; set; } = true;
 

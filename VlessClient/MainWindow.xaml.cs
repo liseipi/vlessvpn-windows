@@ -43,6 +43,7 @@ public sealed partial class MainWindow : Window
         var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
         var winId = Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = AppWindow.GetFromWindowId(winId);
+        _appWindow.Resize(new Windows.Graphics.SizeInt32(680, 680));
         _appWindow.Closing += OnWindowClosing;
     }
 
@@ -73,7 +74,6 @@ public sealed partial class MainWindow : Window
 
         // 端口
         Socks5PortBox.Value = s.ListenPort;
-        HttpPortBox.Value   = s.HttpPort;
 
         // TUN
         TunToggle.IsOn      = s.EnableTun;
@@ -110,7 +110,6 @@ public sealed partial class MainWindow : Window
             // 应用当前端口设置
             cfg = cfg.Clone();
             cfg.ListenPort = (int)Socks5PortBox.Value;
-            cfg.HttpPort   = (int)HttpPortBox.Value;
             cfg.EnableTun  = TunToggle.IsOn;
             cfg.TunAddress = TunAddressBox.Text;
             cfg.TunPrefix  = (int)TunPrefixBox.Value;

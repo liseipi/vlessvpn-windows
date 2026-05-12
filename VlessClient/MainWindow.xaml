@@ -148,24 +148,12 @@
                     <StackPanel Spacing="12">
                         <TextBlock Text="代理设置" Style="{StaticResource BodyStrongTextBlockStyle}"/>
 
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                                <TextBlock Text="SOCKS5 端口" Style="{StaticResource CaptionTextBlockStyle}"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <NumberBox x:Name="Socks5PortBox" Value="10808" Minimum="1" Maximum="65535"
-                                           SpinButtonPlacementMode="Inline"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Margin="8,0,0,0">
-                                <TextBlock Text="HTTP 端口" Style="{StaticResource CaptionTextBlockStyle}"
-                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-                                <NumberBox x:Name="HttpPortBox" Value="10809" Minimum="1" Maximum="65535"
-                                           SpinButtonPlacementMode="Inline"/>
-                            </StackPanel>
-                        </Grid>
+                        <StackPanel>
+                            <TextBlock Text="本地端口 (SOCKS5 / HTTP)" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <NumberBox x:Name="Socks5PortBox" Value="10808" Minimum="1" Maximum="65535"
+                                       SpinButtonPlacementMode="Inline"/>
+                        </StackPanel>
 
                         <!-- TUN 模式开关 -->
                         <Grid>

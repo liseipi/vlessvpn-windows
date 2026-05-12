@@ -23,9 +23,6 @@ public class AppSettings
     [JsonPropertyName("listenPort")]
     public int ListenPort { get; set; } = 10808;
 
-    [JsonPropertyName("httpPort")]
-    public int HttpPort { get; set; } = 10809;
-
     [JsonPropertyName("tunAddress")]
     public string TunAddress { get; set; } = "198.18.0.1";
 
