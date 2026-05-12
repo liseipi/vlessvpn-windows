@@ -1,0 +1,16 @@
+# Visual Studio 目录
+.vs/
+bin/
+obj/
+Debug/
+Release/
+
+# 用户设置
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# 其他临时文件
+*.log
+*.cache

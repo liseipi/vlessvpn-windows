@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="VlessClient.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="VLESS Client"
+    >
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- Title bar -->
+            <RowDefinition Height="*"/>      <!-- Content -->
+            <RowDefinition Height="Auto"/>   <!-- Log panel -->
+            <RowDefinition Height="Auto"/>   <!-- Status bar -->
+        </Grid.RowDefinitions>
+
+        <!-- ── 自定义标题栏 ───────────────────────────────────────────── -->
+        <Grid x:Name="AppTitleBar" Grid.Row="0" Height="48"
+              Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
+                <Ellipse Width="20" Height="20" Fill="{StaticResource AccentGradient}"/>
+                <TextBlock Text="VLESS Client" Margin="10,0,0,0"
+                           Style="{StaticResource SubtitleTextBlockStyle}"
+                           VerticalAlignment="Center"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- ── 主内容区 ──────────────────────────────────────────────── -->
+        <ScrollViewer Grid.Row="1" Padding="20,16">
+            <StackPanel Spacing="16">
+
+                <!-- 连接状态卡片 -->
+                <Border x:Name="StatusCard" CornerRadius="12" Padding="20"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="连接状态" Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Ellipse x:Name="StatusDot" Width="10" Height="10"
+                                         Fill="{StaticResource StatusStoppedBrush}"
+                                         VerticalAlignment="Center"/>
+                                <TextBlock x:Name="StatusText" Text="未连接"
+                                           Style="{StaticResource BodyStrongTextBlockStyle}"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                            <TextBlock x:Name="ConnectionCountText"
+                                       Text="活动连接: 0"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <!-- 大开关按钮 -->
+                        <Button x:Name="ToggleButton" Grid.Column="1"
+                                Width="80" Height="80"
+                                CornerRadius="40"
+                                Background="{StaticResource StatusStoppedBrush}"
+                                Click="ToggleButton_Click">
+                            <FontIcon x:Name="ToggleIcon" Glyph="&#xE768;" FontSize="28"
+                                      Foreground="White"/>
+                        </Button>
+                    </Grid>
+                </Border>
+
+                <!-- 配置选择卡片 -->
+                <Border CornerRadius="12" Padding="20"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <Grid>
+                            <TextBlock Text="服务器配置" Style="{StaticResource BodyStrongTextBlockStyle}"
+                                       VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                                <Button x:Name="ImportBtn" Content="导入" Click="ImportBtn_Click"
+                                        Style="{StaticResource AccentButtonStyle}"/>
+                                <Button x:Name="ExportBtn" Content="导出" Click="ExportBtn_Click"/>
+                                <Button Content="新建" Click="NewConfigBtn_Click"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <ComboBox x:Name="ConfigSelector" HorizontalAlignment="Stretch"
+                                  PlaceholderText="选择配置..."
+                                  SelectionChanged="ConfigSelector_SelectionChanged"/>
+
+                        <!-- 配置详情 -->
+                        <Grid x:Name="ConfigDetail" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+
+                            <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,8">
+                                <TextBlock Text="服务器" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Name="DetailServer" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0,0,8">
+                                <TextBlock Text="端口" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Name="DetailPort"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,8,8">
+                                <TextBlock Text="传输" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Name="DetailNetwork"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,0,0,8">
+                                <TextBlock Text="安全" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Name="DetailSecurity"/>
+                            </StackPanel>
+                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="SOCKS5 端口" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock x:Name="DetailListenPort"/>
+                            </StackPanel>
+
+                            <!-- 操作按钮 -->
+                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="8,0,0,0"
+                                        Orientation="Horizontal" Spacing="8" VerticalAlignment="Bottom">
+                                <Button Content="编辑" Click="EditConfigBtn_Click" FontSize="12"/>
+                                <Button Content="删除" Click="DeleteConfigBtn_Click" FontSize="12"/>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- 端口 & TUN 设置 -->
+                <Border CornerRadius="12" Padding="20"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="代理设置" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                                <TextBlock Text="SOCKS5 端口" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <NumberBox x:Name="Socks5PortBox" Value="10808" Minimum="1" Maximum="65535"
+                                           SpinButtonPlacementMode="Inline"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                <TextBlock Text="HTTP 端口" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <NumberBox x:Name="HttpPortBox" Value="10809" Minimum="1" Maximum="65535"
+                                           SpinButtonPlacementMode="Inline"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- TUN 模式开关 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="TUN 全局模式"
+                                           Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                                <TextBlock Text="通过 hev-socks5-tunnel 接管所有流量（需要管理员权限）"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch x:Name="TunToggle" Grid.Column="1"
+                                          OffContent="" OnContent=""
+                                          Toggled="TunToggle_Toggled"/>
+                        </Grid>
+
+                        <!-- TUN 详细设置（折叠） -->
+                        <StackPanel x:Name="TunSettings" Visibility="Collapsed" Spacing="8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Margin="0,0,8,0">
+                                    <TextBlock Text="TUN 地址" Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBox x:Name="TunAddressBox" Text="198.18.0.1"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="前缀长度" Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <NumberBox x:Name="TunPrefixBox" Value="15" Minimum="1" Maximum="30"/>
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel>
+                                <TextBlock Text="DNS 服务器" Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBox x:Name="TunDnsBox" Text="1.1.1.1"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- 系统设置 -->
+                <Border CornerRadius="12" Padding="20"
+                        Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                        BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                        BorderThickness="1">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="系统设置" Style="{StaticResource BodyStrongTextBlockStyle}"/>
+
+                        <Grid>
+                            <TextBlock Text="开机自启" VerticalAlignment="Center"/>
+                            <ToggleSwitch x:Name="AutoStartToggle" HorizontalAlignment="Right"
+                                          OffContent="" OnContent=""
+                                          Toggled="AutoStartToggle_Toggled"/>
+                        </Grid>
+                        <Grid>
+                            <TextBlock Text="最小化到托盘" VerticalAlignment="Center"/>
+                            <ToggleSwitch x:Name="MinimizeToTrayToggle" HorizontalAlignment="Right"
+                                          OffContent="" OnContent=""
+                                          Toggled="MinimizeToTrayToggle_Toggled"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- ── 日志面板 ───────────────────────────────────────────────── -->
+        <Border Grid.Row="2" Margin="20,0,20,0" CornerRadius="12" Height="160"
+                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <Grid Padding="12,8">
+                    <TextBlock Text="运行日志" Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    <Button Content="清空" HorizontalAlignment="Right"
+                            FontSize="11" Padding="8,2" Click="ClearLogBtn_Click"/>
+                </Grid>
+                <ScrollViewer x:Name="LogScroller" Grid.Row="1"
+                              HorizontalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="LogText"
+                               FontFamily="Consolas" FontSize="11"
+                               Padding="12,0,12,8"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               TextWrapping="Wrap"
+                               IsTextSelectionEnabled="True"/>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- ── 状态栏 ─────────────────────────────────────────────────── -->
+        <Border Grid.Row="3" Padding="20,8"
+                Background="{ThemeResource LayerFillColorDefaultBrush}">
+            <Grid>
+                <TextBlock x:Name="FooterText"
+                           Text="就绪"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="VLESS over WebSocket + hev-socks5-tunnel"
+                           HorizontalAlignment="Right"
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                           VerticalAlignment="Center"/>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

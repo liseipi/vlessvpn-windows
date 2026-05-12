@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Application
+    x:Class="VlessClient.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- Status colors -->
+            <SolidColorBrush x:Key="StatusRunningBrush"  Color="#22C55E"/>
+            <SolidColorBrush x:Key="StatusStoppedBrush"  Color="#EF4444"/>
+            <SolidColorBrush x:Key="StatusStartingBrush" Color="#F59E0B"/>
+
+            <!-- Accent gradient -->
+            <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#6366F1" Offset="0"/>
+                <GradientStop Color="#8B5CF6" Offset="1"/>
+            </LinearGradientBrush>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
