@@ -42,16 +42,29 @@ foreach (int s in sizes)
         {
             int si = srcRow + x * 4;
             int di = dstRow + x * 4;
+            byte a = rowData[si + 3];
             pixels[di + 0] = rowData[si + 0];  // B
             pixels[di + 1] = rowData[si + 1];  // G
             pixels[di + 2] = rowData[si + 2];  // R
-            pixels[di + 3] = 255;              // A (force opaque)
+            pixels[di + 3] = a;                // A
         }
     }
 
-    // AND mask: all 0 (opaque), row-aligned to 4 bytes
+    // AND mask: bit=1 where pixel is transparent (for compatibility)
     int andStride = ((s + 31) / 32) * 4;
     byte[] andMask = new byte[andStride * s];
+    for (int y = 0; y < s; y++)
+    {
+        for (int x = 0; x < s; x++)
+        {
+            int pi = (y * s + x) * 4;
+            if (pixels[pi + 3] < 128)  // transparent pixel
+            {
+                int byteIdx = y * andStride + x / 8;
+                andMask[byteIdx] |= (byte)(0x80 >> (x % 8));
+            }
+        }
+    }
 
     // Combine into single BMP blob
     int total = 40 + pixels.Length + andMask.Length;

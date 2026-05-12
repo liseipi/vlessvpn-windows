@@ -46,10 +46,13 @@ public sealed partial class MainWindow : Window
         _appWindow = AppWindow.GetFromWindowId(winId);
         _appWindow.Resize(new Windows.Graphics.SizeInt32(680, 680));
 
-        // 设置窗口图标
+        // 设置窗口图标 + 标题栏图标
         var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico");
         if (System.IO.File.Exists(iconPath))
+        {
             _appWindow.SetIcon(iconPath);
+            TitleBarIcon.Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(iconPath));
+        }
 
         _appWindow.Closing += OnWindowClosing;
     }

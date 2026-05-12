@@ -24,13 +24,10 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Width="32" Height="32" CornerRadius="8"
-                    Background="{StaticResource AccentGradient}"
-                    Margin="16,0,0,0" VerticalAlignment="Center">
-                <FontIcon Glyph="&#xE701;" FontSize="16" Foreground="White"
-                          HorizontalAlignment="Center" VerticalAlignment="Center"/>
-            </Border>
-            <TextBlock Grid.Column="0" Text="VLESS Client" Margin="56,0,0,0"
+            <Image Grid.Column="0" x:Name="TitleBarIcon"
+                   Width="24" Height="24"
+                   Margin="16,0,0,0" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="VLESS Client" Margin="8,0,0,0"
                        Style="{StaticResource SubtitleTextBlockStyle}"
                        VerticalAlignment="Center"/>
         </Grid>
