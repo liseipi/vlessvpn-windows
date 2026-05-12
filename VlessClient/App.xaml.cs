@@ -21,9 +21,55 @@ public partial class App : Application
     private TaskbarIcon?    _trayIcon;
     private MenuFlyoutItem? _toggleMenuItem;   // 需要动态更新文字
 
-    public App() { InitializeComponent(); }
+    public App()
+    {
+        // ── 全局异常捕获，写入日志防止闪退无痕 ──────────────────────────
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            WriteCrashLog("UnhandledException", e.ExceptionObject as Exception);
+
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            WriteCrashLog("UnobservedTaskException", e.Exception);
+            e.SetObserved();
+        };
+
+        this.UnhandledException += (_, e) =>
+        {
+            e.Handled = true;
+            WriteCrashLog("App.UnhandledException", e.Exception);
+        };
+
+        InitializeComponent();
+    }
+
+    private static void WriteCrashLog(string source, Exception? ex)
+    {
+        try
+        {
+            var path = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                "VlessClient_crash.log");
+            var msg = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{source}]\n{ex}\n\n";
+            System.IO.File.AppendAllText(path, msg);
+        }
+        catch { }
+    }
 
     protected override void OnLaunched(LaunchActivatedEventArgs args)
+    {
+        try
+        {
+            OnLaunchedCore(args);
+        }
+        catch (Exception ex)
+        {
+            WriteCrashLog("OnLaunched", ex);
+            // 显示一个最简错误窗口，避免完全无声退出
+            ShowCrashDialog(ex.Message);
+        }
+    }
+
+    private void OnLaunchedCore(LaunchActivatedEventArgs args)
     {
         MainWin = new MainWindow();
 
@@ -36,20 +82,35 @@ public partial class App : Application
 
         if (startMinimized)
             MainWin.HideWindow();
+    }   // end OnLaunchedCore
+
+    private static void ShowCrashDialog(string message)
+    {
+        // 框架可能已损坏，用记事本打开日志作为兜底提示
+        var logPath = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+            "VlessClient_crash.log");
+        try { System.Diagnostics.Process.Start("notepad.exe", logPath); } catch { }
     }
 
     // ── 托盘图标 ──────────────────────────────────────────────────────────────
 
     private void SetupTrayIcon()
     {
-        // IconSource 是 ImageSource，用 BitmapImage 加载打包资源中的 .ico
-        var iconSource = new BitmapImage(new Uri("ms-appx:///Assets/tray.ico"));
+        // ms-appx:// 在 unpackaged 应用中会崩溃，用绝对文件路径加载 .ico
+        BitmapImage? iconSource = null;
+        try
+        {
+            var icoPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "tray.ico");
+            if (System.IO.File.Exists(icoPath))
+                iconSource = new BitmapImage(new Uri(icoPath));
+        }
+        catch { /* 图标加载失败不影响功能 */ }
 
         _trayIcon = new TaskbarIcon
         {
-            ToolTipText    = "VLESS Client",
-            IconSource     = iconSource,
-            // 双击图标还原窗口（DoubleClickCommand 接受 ICommand）
+            ToolTipText        = "VLESS Client",
+            IconSource         = iconSource,
             DoubleClickCommand = new RelayCommand(() => ShowMainWindow()),
         };
 
@@ -70,6 +131,9 @@ public partial class App : Application
         menu.Items.Add(exitItem);
 
         _trayIcon.ContextFlyout = menu;
+
+        // unpackaged WinUI 应用必须显式调用 ForceCreate，否则托盘图标不会出现
+        _trayIcon.ForceCreate(enablesEfficiencyMode: false);
 
         // ── 监听代理状态，更新提示文字和菜单项 ───────────────────────────
         Proxy.StatusChanged += status =>
