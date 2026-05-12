@@ -35,7 +35,8 @@ public sealed partial class MainWindow : Window
 
     private void SetupWindow()
     {
-        // 自定义标题栏
+        // 自定义标题栏 & Mica 材质
+        SystemBackdrop = new MicaBackdrop();
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
 
@@ -141,7 +142,8 @@ public sealed partial class MainWindow : Window
                 ProxyStatus.Error    => Color.FromArgb(255, 239, 68, 68),   // red
                 _                   => Color.FromArgb(255, 239, 68, 68)     // red
             };
-            StatusDot.Fill = new SolidColorBrush(color);
+            StatusDot.Background = new SolidColorBrush(color);
+            FooterDot.Background = new SolidColorBrush(color);
 
             // 开关按钮
             bool running = status == ProxyStatus.Running;

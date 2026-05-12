@@ -9,16 +9,26 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!-- Status colors -->
+            <!-- status colors -->
             <SolidColorBrush x:Key="StatusRunningBrush"  Color="#22C55E"/>
             <SolidColorBrush x:Key="StatusStoppedBrush"  Color="#EF4444"/>
             <SolidColorBrush x:Key="StatusStartingBrush" Color="#F59E0B"/>
 
-            <!-- Accent gradient -->
+            <!-- brand gradient: indigo → violet -->
             <LinearGradientBrush x:Key="AccentGradient" StartPoint="0,0" EndPoint="1,1">
                 <GradientStop Color="#6366F1" Offset="0"/>
                 <GradientStop Color="#8B5CF6" Offset="1"/>
             </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="AccentGradientH" StartPoint="0,0" EndPoint="1,0">
+                <GradientStop Color="#6366F1" Offset="0"/>
+                <GradientStop Color="#8B5CF6" Offset="1"/>
+            </LinearGradientBrush>
+
+            <!-- card styles -->
+            <StaticResource x:Key="CardBackground" ResourceKey="CardBackgroundFillColorDefaultBrush"/>
+            <StaticResource x:Key="CardBorder"     ResourceKey="CardStrokeColorDefaultBrush"/>
+            <CornerRadius x:Key="CardRadius">10</CornerRadius>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
