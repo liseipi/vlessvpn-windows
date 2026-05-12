@@ -27,6 +27,9 @@ public sealed class TunService : IDisposable
         if (IsRunning) return;
 
         string exePath = Path.Combine(AppContext.BaseDirectory, "hev-socks5-tunnel.exe");
+        if (!File.Exists(exePath))
+            throw new FileNotFoundException($"找不到 hev-socks5-tunnel.exe，请检查 runtimes 目录。路径: {exePath}");
+
         string configPath = WriteYamlConfig();
 
         Log($"启动 hev-socks5-tunnel.exe...");
@@ -87,9 +90,11 @@ public sealed class TunService : IDisposable
         yaml.AppendLine($"  port: {_config.ListenPort}");
         yaml.AppendLine("  udp: full");
 
+        // log-file 使用 Windows 可写路径（/dev/stderr 仅在 Linux 下有效）
+        var logFile = Path.Combine(Path.GetTempPath(), "vless-tun.log").Replace("\\", "/");
         yaml.AppendLine("misc:");
         yaml.AppendLine("  log-level: warn");
-        yaml.AppendLine($"  log-file: /dev/stderr");
+        yaml.AppendLine($"  log-file: {logFile}");
 
         var path = Path.Combine(Path.GetTempPath(), $"vless-tun-{DateTime.Now:HHmmss}.yaml");
         File.WriteAllText(path, yaml.ToString(), Encoding.UTF8);

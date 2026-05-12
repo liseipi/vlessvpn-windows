@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using H.NotifyIcon;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -180,9 +181,11 @@ public sealed partial class MainWindow : Window
         }
         LogText.Text += msg + "\n";
 
-        // 自动滚动
-        _ = LogScroller.UpdateLayoutAsync();
-        LogScroller.ScrollToVerticalOffset(LogScroller.ScrollableHeight);
+        // 自动滚动：UpdateLayoutAsync 在 WinUI 不存在，改用 DispatcherQueue 延迟执行
+        DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            LogScroller.ScrollToVerticalOffset(LogScroller.ScrollableHeight);
+        });
     }
 
     private void ClearLogBtn_Click(object sender, RoutedEventArgs e)
@@ -423,10 +426,19 @@ public sealed partial class MainWindow : Window
 
     // ── 系统设置 ──────────────────────────────────────────────────────────────
 
-    private void AutoStartToggle_Toggled(object sender, RoutedEventArgs e)
+    private async void AutoStartToggle_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
-        AutoStartService.SetEnabled(AutoStartToggle.IsOn);
+        var (success, error) = AutoStartService.SetEnabled(AutoStartToggle.IsOn);
+        if (!success)
+        {
+            // 回滚开关状态并提示
+            _suppressEvents = true;
+            AutoStartToggle.IsOn = !AutoStartToggle.IsOn;
+            _suppressEvents = false;
+            await ShowErrorAsync($"开机自启设置失败: {error}");
+            return;
+        }
         App.Settings.Settings.AutoStart = AutoStartToggle.IsOn;
         App.Settings.Save();
     }
@@ -445,14 +457,19 @@ public sealed partial class MainWindow : Window
         if (App.Settings.Settings.StartMinimized)
         {
             args.Cancel = true;
-            Hide();
+            HideWindow();
         }
         else
         {
-            // 真正退出：停止代理
-            App.Proxy.StopAsync().GetAwaiter().GetResult();
+            _ = App.Proxy.StopAsync();
         }
     }
+
+    /// <summary>隐藏窗口到托盘（通过 H.NotifyIcon 的 WindowExtensions 扩展方法）</summary>
+    public void HideWindow() => this.Hide();   // H.NotifyIcon.WindowExtensions.Hide(Window)
+
+    /// <summary>从托盘还原窗口</summary>
+    public void ShowWindow() => this.Show();   // H.NotifyIcon.WindowExtensions.Show(Window)
 
     public void BringToFront()
     {

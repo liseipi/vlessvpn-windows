@@ -8,7 +8,7 @@ namespace VlessClient.Services;
 
 public enum ProxyStatus { Stopped, Starting, Running, Stopping, Error }
 
-public class ProxyManager : IDisposable
+public class ProxyManager : IDisposable, IAsyncDisposable
 {
     private VlessProxyService? _proxy;
     private TunService?        _tun;
@@ -97,6 +97,16 @@ public class ProxyManager : IDisposable
 
     public void Dispose()
     {
-        StopInternalAsync().GetAwaiter().GetResult();
+        // 同步 Dispose 仅做尽力清理（不 await，避免死锁）
+        // 推荐在应用退出时调用 DisposeAsync 或显式 await StopAsync()
+        try { _tun?.Dispose(); } catch { }
+        try { _proxy?.Dispose(); } catch { }
+        _tun   = null;
+        _proxy = null;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopInternalAsync();
     }
 }

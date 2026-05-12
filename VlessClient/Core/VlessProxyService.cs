@@ -192,20 +192,33 @@ public sealed class VlessProxyService : IDisposable
     {
         try
         {
-            var sb = new StringBuilder();
-            sb.Append((char)firstByte);
-            var oneBuf = new byte[1];
-            while (true)
+            // 用 BufferedStream 避免逐字节 ReadAsync，改为批量读取后在 buffer 中查找 \r\n\r\n
+            var headerBuf = new byte[8192];
+            headerBuf[0]  = firstByte;
+            int totalRead = 1;
+            int eoh       = -1; // end-of-header index
+
+            while (totalRead < headerBuf.Length)
             {
-                int n = await stream.ReadAsync(oneBuf, ct);
+                int n = await stream.ReadAsync(headerBuf.AsMemory(totalRead), ct);
                 if (n == 0) break;
-                sb.Append((char)oneBuf[0]);
-                if (sb.Length >= 4 && sb.ToString(sb.Length - 4, 4) == "\r\n\r\n") break;
+                totalRead += n;
+
+                // 在新读入的数据里查找 \r\n\r\n（从安全偏移开始）
+                int searchFrom = Math.Max(0, totalRead - n - 3);
+                eoh = FindEndOfHeader(headerBuf, searchFrom, totalRead);
+                if (eoh >= 0) break;
             }
 
-            string raw = sb.ToString();
+            if (eoh < 0) { client.Close(); return; } // 请求头过大或格式异常
+
+            string raw   = Encoding.ASCII.GetString(headerBuf, 0, eoh);
+            // eoh + 4 之后是请求体（对 CONNECT 无意义，对普通 HTTP 可能有 body）
+            int bodyStart = eoh + 4;
+            int preReadBodyLen = totalRead - bodyStart;
+
             var lines = raw.Split(new[] { "\r\n" }, StringSplitOptions.None);
-            var rl = lines[0].Split(' ');
+            var rl    = lines[0].Split(' ');
             if (rl.Length < 2) { client.Close(); return; }
 
             string method = rl[0].ToUpperInvariant();
@@ -246,11 +259,22 @@ public sealed class VlessProxyService : IDisposable
                 string host = u.Host;
                 int    port = u.Port > 0 ? u.Port : (u.Scheme == "https" ? 443 : 80);
 
+                // 读取剩余 body（请求头之后可能已预读了部分 body）
                 int bodyLen = 0;
                 string cl = GetHeader(lines, "content-length");
                 if (!string.IsNullOrEmpty(cl)) int.TryParse(cl, out bodyLen);
+
                 byte[] body = new byte[bodyLen];
-                if (bodyLen > 0) await ReadExactAsync(stream, body, 0, bodyLen, ct);
+                if (bodyLen > 0)
+                {
+                    // 先使用预读部分
+                    int alreadyHave = Math.Min(preReadBodyLen, bodyLen);
+                    if (alreadyHave > 0)
+                        Buffer.BlockCopy(headerBuf, bodyStart, body, 0, alreadyHave);
+                    // 再从 stream 补足剩余
+                    if (alreadyHave < bodyLen)
+                        await ReadExactAsync(stream, body, alreadyHave, bodyLen - alreadyHave, ct);
+                }
 
                 ClientWebSocket ws;
                 try { ws = await OpenTunnelAsync(ct); }
@@ -286,21 +310,22 @@ public sealed class VlessProxyService : IDisposable
         int millisecondsTimeout,
         CancellationToken ct)
     {
-        var deadline = DateTime.UtcNow.AddMilliseconds(millisecondsTimeout);
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeoutCts.CancelAfter(millisecondsTimeout);
         var buf = new byte[65536];
         try
         {
-            while (DateTime.UtcNow < deadline && !ct.IsCancellationRequested)
+            while (!timeoutCts.IsCancellationRequested)
             {
-                if (!stream.DataAvailable) { await Task.Delay(5, ct); continue; }
-                int n = await stream.ReadAsync(buf, ct);
+                int n = await stream.ReadAsync(buf, timeoutCts.Token);
                 if (n <= 0) break;
                 var chunk = new byte[n];
                 Buffer.BlockCopy(buf, 0, chunk, 0, n);
                 pending.Add(new ArraySegment<byte>(chunk));
             }
         }
-        catch { /* ignore */ }
+        catch (OperationCanceledException) { /* 超时正常退出 */ }
+        catch { /* 连接异常，忽略，让后续流程处理 */ }
     }
 
     // ── 双向中继 ──────────────────────────────────────────────────────────────
@@ -542,6 +567,17 @@ public sealed class VlessProxyService : IDisposable
                 return l[(prefix.Length)..].Trim();
         }
         return string.Empty;
+    }
+
+    /// <summary>在字节数组中查找 \r\n\r\n，返回第一个 \r 的位置，未找到返回 -1</summary>
+    private static int FindEndOfHeader(byte[] buf, int from, int count)
+    {
+        for (int i = from; i <= count - 4; i++)
+        {
+            if (buf[i] == '\r' && buf[i + 1] == '\n' && buf[i + 2] == '\r' && buf[i + 3] == '\n')
+                return i;
+        }
+        return -1;
     }
 
     private void Log(string msg) => LogMessage?.Invoke(msg);
