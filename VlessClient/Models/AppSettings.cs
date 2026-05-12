@@ -31,4 +31,7 @@ public class AppSettings
 
     [JsonPropertyName("tunDns")]
     public string TunDns { get; set; } = "1.1.1.1";
+
+    [JsonPropertyName("shareOverLan")]
+    public bool ShareOverLan { get; set; } = false;
 }

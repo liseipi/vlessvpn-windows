@@ -48,9 +48,11 @@ public sealed class VlessProxyService : IDisposable
         if (IsRunning) return;
         _cts = new CancellationTokenSource();
 
-        _listener = new TcpListener(IPAddress.Loopback, _cfg.ListenPort);
+        var bindAddr = _cfg.ShareOverLan ? IPAddress.Any : IPAddress.Loopback;
+        _listener = new TcpListener(bindAddr, _cfg.ListenPort);
         _listener.Start();
-        Log($"SOCKS5 代理已启动 → socks5://127.0.0.1:{_cfg.ListenPort}");
+        var host = _cfg.ShareOverLan ? "0.0.0.0" : "127.0.0.1";
+        Log($"代理已启动 → socks5://{host}:{_cfg.ListenPort}" + (_cfg.ShareOverLan ? " (局域网共享)" : ""));
 
         _acceptLoop = AcceptLoopAsync(_cts.Token);
         await Task.CompletedTask;

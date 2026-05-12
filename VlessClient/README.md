@@ -1,11 +1,19 @@
 # VlessClient — WinUI 3 + VLESS + hev-socks5-tunnel
 
 Windows 平台 VLESS 代理客户端，支持：
-- **VLESS over WebSocket** 代理（SOCKS5 + HTTP 双协议）
-- **TUN 全局模式**（通过 hev-socks5-tunnel）
-- **系统托盘**（最小化到托盘、右键菜单）
-- **开机自启动**
-- **配置导入/导出**（vless:// URI 格式）
+- **VLESS over WebSocket** 代理（单端口同时支持 SOCKS5 和 HTTP）
+- **TUN 全局模式**（通过 hev-socks5-tunnel 接管所有流量）
+- **系统托盘**（最小化到托盘、右键菜单控制）
+- **开机自启动**（注册表，支持 `--minimized` 静默启动）
+- **配置导入/导出**（vless:// URI 格式，支持批量导入）
+
+---
+
+## 环境要求
+
+- Windows 10 1903+ / Windows 11
+- .NET 8 SDK
+- 以**管理员身份运行**（TUN 模式需要创建虚拟网卡）
 
 ---
 
@@ -14,75 +22,57 @@ Windows 平台 VLESS 代理客户端，支持：
 ```
 VlessClient/
 ├── Core/
-│   ├── VlessProxyService.cs      # VLESS WebSocket 代理核心（你的原始逻辑）
-│   └── TunService.cs             # hev-socks5-tunnel 封装
+│   ├── VlessProxyService.cs      # VLESS over WebSocket 代理核心
+│   └── TunService.cs             # hev-socks5-tunnel 进程管理
 ├── Models/
-│   ├── VlessConfig.cs            # 配置模型 + vless:// URI 解析
-│   └── AppSettings.cs            # 持久化设置
+│   ├── VlessConfig.cs            # 配置模型 + vless:// URI 解析/导出
+│   └── AppSettings.cs            # 持久化设置模型
 ├── Services/
-│   ├── ProxyManager.cs           # 代理 + TUN 统一管理
-│   ├── SettingsService.cs        # JSON 配置持久化
-│   └── AutoStartService.cs       # 开机自启（注册表）
-├── App.xaml / App.xaml.cs        # 应用入口 + 系统托盘
-├── MainWindow.xaml               # 主界面 XAML
+│   ├── ProxyManager.cs           # 代理 + TUN 统一调度（状态机）
+│   ├── SettingsService.cs        # JSON 配置读写（%AppData%）
+│   └── AutoStartService.cs       # 开机自启（注册表操作）
+├── App.xaml / App.xaml.cs        # 应用入口 + 系统托盘 + 全局异常处理
+├── MainWindow.xaml               # 主界面（WinUI 3）
 └── MainWindow.xaml.cs            # 主界面逻辑
 ```
 
 ---
 
-## 环境要求
+## 依赖包
 
-- Windows 10 1903+ / Windows 11
-- .NET 8 SDK
-- Visual Studio 2022 (带 WinUI / Windows App SDK 工作负载)
-- 以**管理员身份运行**（TUN 模式需要）
+在 `VlessClient.csproj` 中声明：
 
----
-
-## 安装依赖
-
-在 `VlessClient.csproj` 中已声明：
-```
-Microsoft.WindowsAppSDK 1.5
-WinUIEx 2.3.4
-H.NotifyIcon.WinUI 2.1.3
-```
+| 包 | 版本 | 用途 |
+|---|---|---|
+| Microsoft.WindowsAppSDK | 1.5 | WinUI 3 运行时 |
+| WinUIEx | 2.3.4 | WinUI 窗口扩展 |
+| H.NotifyIcon.WinUI | 2.1.3 | 系统托盘图标 |
 
 ---
 
-## 放置原生库
+## 原生文件
 
-### hev-socks5-tunnel
-
-将你编译好的库文件放到对应目录：
+将 `hev-socks5-tunnel.exe` 及相关 DLL 放到对应目录：
 
 ```
-VlessClient/
-└── runtimes/
-    ├── win-x64/
-    │   └── native/
-    │       ├── hev-socks5-tunnel.dll   ← 从 .so 转换/编译的 Windows DLL
-    │       └── wintun.dll              ← 从 wintun.zip 解压
-    ├── win-x86/
-    │   └── native/
-    │       ├── hev-socks5-tunnel.dll
-    │       └── wintun.dll
-    └── win-arm64/
-        └── native/
-            ├── hev-socks5-tunnel.dll
-            └── wintun.dll
+VlessClient/runtimes/
+├── win-x64/
+│   ├── hev-socks5-tunnel.exe
+│   ├── wintun.dll
+│   └── msys-2.0.dll
+├── win-x86/
+│   └── ...
+└── win-arm64/
+    └── ...
 ```
 
-> **重要**：你的 `.so` 文件是 Linux/Android 格式，Windows 需要编译 `.dll` 版本。
-> hev-socks5-tunnel 官方支持 Windows，参见：
-> https://github.com/heiher/hev-socks5-tunnel
->
-> **wintun.dll** 下载：https://www.wintun.net/
+- `hev-socks5-tunnel.exe` — 源码：https://github.com/heiher/hev-socks5-tunnel
+- `wintun.dll` — 下载：https://www.wintun.net/
 
-### 托盘图标
+托盘图标放置：
 
 ```
-VlessClient/Assets/tray.ico   ← 放置你的图标文件
+VlessClient/Assets/tray.ico
 ```
 
 ---
@@ -90,29 +80,32 @@ VlessClient/Assets/tray.ico   ← 放置你的图标文件
 ## 编译运行
 
 ```powershell
-# 以管理员身份打开 PowerShell
-cd VlessClient
-dotnet restore
-dotnet build -c Release
+# 自包含部署必须指定平台架构
 
-# 或用 Visual Studio 2022 打开 .sln 后 F5
+# Debug
+dotnet build -c Debug -p:Platform=x64
+
+# Release
+dotnet build -c Release -p:Platform=x64
+
+# 直接运行
+dotnet run -c Debug -p:Platform=x64
 ```
+
+项目无 .sln 文件，直接编译 .csproj 即可。
 
 ---
 
-## hev-socks5-tunnel Windows 编译说明
+## TUN 全局模式原理
 
-如果你只有 `.so` 文件（Linux/Android），需要在 Windows 重新编译：
-
-```bash
-# 在 MSYS2 / MinGW64 中
-git clone https://github.com/heiher/hev-socks5-tunnel
-cd hev-socks5-tunnel
-git submodule update --init
-make CROSS_PREFIX=x86_64-w64-mingw32- TARGET=windows
 ```
-
-编译产物 `hev-socks5-tunnel.dll` 复制到上述 runtimes 目录。
+所有流量 → TUN 虚拟网卡 (198.18.0.1/15)
+         → hev-socks5-tunnel
+         → SOCKS5 (127.0.0.1:本地端口)
+         → VlessProxyService
+         → VLESS over WebSocket
+         → 远端服务器
+```
 
 ---
 
@@ -120,39 +113,17 @@ make CROSS_PREFIX=x86_64-w64-mingw32- TARGET=windows
 
 导入示例：
 ```
-vless://55a95ae1-4ae8-4461-8484-457279821b40@broad.aicms.dpdns.org:443?encryption=none&security=tls&sni=broad.aicms.dpdns.org&type=ws&host=broad.aicms.dpdns.org&path=/?ed=2560#broad.aicms.dpdns.org
+vless://uuid@server:443?encryption=none&security=tls&sni=xxx&type=ws&host=xxx&path=/?ed=2560#名称
 ```
+
+支持批量导入，每行一个。
 
 ---
 
-## TUN 全局模式原理
+## 注意事项
 
-```
-所有流量 → TUN 网卡 (198.18.0.1/15)
-         → hev-socks5-tunnel
-         → SOCKS5 代理 (127.0.0.1:10808)
-         → VlessProxyService
-         → VLESS over WebSocket
-         → 远端服务器
-```
-
-路由设置（自动）：
-- `0.0.0.0/1` 和 `128.0.0.0/1` → TUN（覆盖默认路由）
-- 服务器 IP → 原网关（防止回环）
-
----
-
-## 已知限制 / 待办
-
-- [ ] UDP 透明代理（hev-socks5-tunnel 支持，需配置）
-- [ ] 分应用代理（PAC 模式）
-- [ ] 延迟测试
-- [ ] 流量统计图表
-- [ ] 多语言
-
----
-
-## 核心代码来源
-
-`Core/VlessProxyService.cs` 直接基于你上传的 `VlessProxyClient.cs`，
-逻辑完全一致：SOCKS5 握手 → early data 收集 → VLESS Header 构建 → WebSocket 中继。
+- 应用以**自包含**方式部署（`WindowsAppSDKSelfContained=true`），无需额外安装 Windows App SDK 运行时
+- 始终以管理员权限运行（`app.manifest` 中声明）
+- 配置保存在 `%AppData%/VlessClient/settings.json`
+- 崩溃日志写入桌面 `VlessClient_crash.log`
+- 关闭窗口默认退出；开启「最小化到托盘」后关闭窗口仅隐藏

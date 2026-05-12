@@ -76,6 +76,9 @@ public sealed partial class MainWindow : Window
         // 端口
         Socks5PortBox.Value = s.ListenPort;
 
+        // LAN 共享
+        ShareOverLanToggle.IsOn = s.ShareOverLan;
+
         // TUN
         TunToggle.IsOn      = s.EnableTun;
         TunSettings.Visibility = s.EnableTun ? Visibility.Visible : Visibility.Collapsed;
@@ -110,8 +113,9 @@ public sealed partial class MainWindow : Window
 
             // 应用当前端口设置
             cfg = cfg.Clone();
-            cfg.ListenPort = (int)Socks5PortBox.Value;
-            cfg.EnableTun  = TunToggle.IsOn;
+            cfg.ListenPort   = (int)Socks5PortBox.Value;
+            cfg.ShareOverLan = ShareOverLanToggle.IsOn;
+            cfg.EnableTun    = TunToggle.IsOn;
             cfg.TunAddress = TunAddressBox.Text;
             cfg.TunPrefix  = (int)TunPrefixBox.Value;
             cfg.TunDns     = TunDnsBox.Text;
@@ -413,6 +417,15 @@ public sealed partial class MainWindow : Window
             ConfigSelector.SelectedIndex = _configs.Count - 1;
         }
         await App.Settings.SaveAsync();
+    }
+
+    // ── LAN 共享 ──────────────────────────────────────────────────────────────
+
+    private void ShareOverLanToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressEvents) return;
+        App.Settings.Settings.ShareOverLan = ShareOverLanToggle.IsOn;
+        App.Settings.Save();
     }
 
     // ── TUN 设置 ──────────────────────────────────────────────────────────────

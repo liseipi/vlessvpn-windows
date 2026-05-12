@@ -58,6 +58,9 @@ public class VlessConfig
     [JsonPropertyName("tunDns")]
     public string TunDns { get; set; } = "1.1.1.1";
 
+    [JsonPropertyName("shareOverLan")]
+    public bool ShareOverLan { get; set; } = false;
+
     // ── 解析 vless:// URI ─────────────────────────────────────────────────
 
     public static bool TryParse(string uri, out VlessConfig config, out string error)

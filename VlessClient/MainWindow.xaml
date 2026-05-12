@@ -182,6 +182,23 @@
                                        SpinButtonPlacementMode="Inline"/>
                         </StackPanel>
 
+                        <!-- LAN 共享 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="局域网共享" FontSize="13" FontWeight="SemiBold"/>
+                                <TextBlock Text="允许局域网内其他设备使用此代理" FontSize="11"
+                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch x:Name="ShareOverLanToggle" Grid.Column="1"
+                                          OffContent="" OnContent=""
+                                          Toggled="ShareOverLanToggle_Toggled"/>
+                        </Grid>
+
                         <!-- TUN toggle -->
                         <Grid>
                             <Grid.ColumnDefinitions>
