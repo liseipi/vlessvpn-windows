@@ -14,3 +14,4 @@ Release/
 # 其他临时文件
 *.log
 *.cache
+.claude
