@@ -101,7 +101,7 @@ public partial class App : Application
         BitmapImage? iconSource = null;
         try
         {
-            var icoPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "tray.ico");
+            var icoPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico");
             if (System.IO.File.Exists(icoPath))
                 iconSource = new BitmapImage(new Uri(icoPath));
         }

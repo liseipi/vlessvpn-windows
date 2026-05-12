@@ -1,0 +1,9 @@
+使用步骤：
+
+  # 1. 把 logo.png 放到 VlessClient/Assets/ 下
+
+  # 2. 生成多分辨率 .ico（只需执行一次，除非换 logo）
+  dotnet run --project scripts/IconGenerator -- VlessClient/Assets/logo.png VlessClient/Assets/app.ico
+
+  # 3. 编译主项目
+  dotnet build VlessClient/VlessClient.csproj -c Debug -p:Platform=x64

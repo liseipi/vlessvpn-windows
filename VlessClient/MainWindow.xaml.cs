@@ -45,6 +45,12 @@ public sealed partial class MainWindow : Window
         var winId = Win32Interop.GetWindowIdFromWindow(hwnd);
         _appWindow = AppWindow.GetFromWindowId(winId);
         _appWindow.Resize(new Windows.Graphics.SizeInt32(680, 680));
+
+        // 设置窗口图标
+        var iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico");
+        if (System.IO.File.Exists(iconPath))
+            _appWindow.SetIcon(iconPath);
+
         _appWindow.Closing += OnWindowClosing;
     }
 
