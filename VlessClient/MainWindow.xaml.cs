@@ -477,15 +477,9 @@ public sealed partial class MainWindow : Window
 
     private void OnWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
-        if (App.Settings.Settings.StartMinimized)
-        {
-            args.Cancel = true;
-            HideWindow();
-        }
-        else
-        {
-            _ = App.Proxy.StopAsync();
-        }
+        // 关闭按钮始终隐藏到托盘，只能通过托盘菜单"退出"来真正关闭
+        args.Cancel = true;
+        HideWindow();
     }
 
     /// <summary>隐藏窗口到托盘（通过 H.NotifyIcon 的 WindowExtensions 扩展方法）</summary>

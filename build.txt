@@ -1,0 +1,13 @@
+第一步：发布应用
+
+1. Visual Studio 打开项目文件夹（或 .csproj）
+2. 右键项目 → 发布 → 创建发布配置文件
+3. 目标：文件夹，配置：Release | x64 ->路径为：bin\x64\release\publish
+4. 勾选 自包含，目标运行时：win-x64
+5. 点 发布
+
+第二步: 打包
+
+1. 下载innosetup，链接：https://jrsoftware.org/isdl.php，版本：https://github.com/jrsoftware/issrc/releases/download/is-6_7_1/innosetup-6.7.1.exe
+2. 运行 scripts\installer\setup.iss 双击用 innosetup 打开
+3. 点击运行打包
