@@ -13,6 +13,14 @@
 4. 勾选 自包含，目标运行时：win-x64
 5. 点 发布
 
+修改后的正确配置应该类似这样：
+
+配置：Release | x64
+目标框架：net8.0-windows10.0.22621.0
+部署模式：自包含
+目标运行时：win-x64
+目标位置：bin\x64\Release\publish\
+
 第二步: 打包
 
 1. 下载innosetup，链接：https://jrsoftware.org/isdl.php，版本：https://github.com/jrsoftware/issrc/releases/download/is-6_7_1/innosetup-6.7.1.exe
