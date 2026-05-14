@@ -1,6 +1,7 @@
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using H.NotifyIcon;
@@ -20,8 +21,18 @@ public sealed partial class MainWindow : Window
     private readonly ObservableCollection<VlessConfig> _configs = new();
     private bool _suppressEvents;
     private AppWindow? _appWindow;
+    private IntPtr _hwnd;
     private int _logLineCount;
     private const int MaxLogLines = 500;
+
+    // 用于退出标志 — 真正的退出不再被 OnWindowClosing 拦截
+    internal bool IsExiting { get; set; }
+
+    [DllImport("user32.dll", EntryPoint = "ShowWindow")]
+    private static extern bool NativeShowWindow(IntPtr hWnd, int nCmdShow);
+
+    private const int SW_HIDE = 0;
+    private const int SW_SHOW = 5;
 
     public MainWindow()
     {
@@ -40,9 +51,9 @@ public sealed partial class MainWindow : Window
         ExtendsContentIntoTitleBar = true;
         SetTitleBar(AppTitleBar);
 
-        // 获取 AppWindow 用于最小化到托盘处理
-        var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
-        var winId = Win32Interop.GetWindowIdFromWindow(hwnd);
+        // 缓存 HWND 和 AppWindow 用于 Show/Hide/Close 控制
+        _hwnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        var winId = Win32Interop.GetWindowIdFromWindow(_hwnd);
         _appWindow = AppWindow.GetFromWindowId(winId);
         _appWindow.Resize(new Windows.Graphics.SizeInt32(680, 680));
 
@@ -477,20 +488,21 @@ public sealed partial class MainWindow : Window
 
     private void OnWindowClosing(AppWindow sender, AppWindowClosingEventArgs args)
     {
-        // 关闭按钮始终隐藏到托盘，只能通过托盘菜单"退出"来真正关闭
+        if (IsExiting)
+            return; // 真正退出，不拦截
         args.Cancel = true;
         HideWindow();
     }
 
-    /// <summary>隐藏窗口到托盘（通过 H.NotifyIcon 的 WindowExtensions 扩展方法）</summary>
-    public void HideWindow() => this.Hide();   // H.NotifyIcon.WindowExtensions.Hide(Window)
+    /// <summary>隐藏窗口到托盘（使用原生 Win32 API）</summary>
+    public void HideWindow() => NativeShowWindow(_hwnd, SW_HIDE);
 
-    /// <summary>从托盘还原窗口</summary>
-    public void ShowWindow() => this.Show();   // H.NotifyIcon.WindowExtensions.Show(Window)
+    /// <summary>从托盘还原窗口（使用原生 Win32 API）</summary>
+    public void ShowWindow() => NativeShowWindow(_hwnd, SW_SHOW);
 
     public void BringToFront()
     {
-        _appWindow?.Show();
+        NativeShowWindow(_hwnd, SW_SHOW);
         _appWindow?.MoveInZOrderAtTop();
     }
 

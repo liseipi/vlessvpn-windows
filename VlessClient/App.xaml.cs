@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using H.NotifyIcon;
@@ -18,8 +19,38 @@ public partial class App : Application
     public static ProxyManager     Proxy    { get; } = new();
     public static SettingsService  Settings { get; } = new();
 
-    private TaskbarIcon?    _trayIcon;
-    private MenuFlyoutItem? _toggleMenuItem;   // 需要动态更新文字
+    private TaskbarIcon? _trayIcon;
+    private string       _toggleMenuText = "开始连接"; // 本地存储，原生菜单不再有 MenuFlyoutItem 引用
+
+    // ═══ Win32 原生弹出菜单 P/Invoke ═══════════════════════════════════════
+    [DllImport("user32.dll")]
+    private static extern IntPtr CreatePopupMenu();
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool AppendMenuW(IntPtr hMenu, uint uFlags, uint uIDNewItem, string lpNewItem);
+
+    [DllImport("user32.dll")]
+    private static extern bool DestroyMenu(IntPtr hMenu);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out POINT lpPoint);
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern int TrackPopupMenu(IntPtr hMenu, uint uFlags, int x, int y, int nReserved, IntPtr hWnd, IntPtr prcRect);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT { public int X; public int Y; }
+
+    private const uint MF_STRING    = 0x00000000;
+    private const uint MF_SEPARATOR = 0x00000800;
+    private const uint TPM_RETURNCMD  = 0x0100;
+    private const uint TPM_NONOTIFY   = 0x0080;
+    private const uint TPM_RIGHTALIGN = 0x0008;
+
+    // ═══════════════════════════════════════════════════════════════════════
 
     public App()
     {
@@ -97,7 +128,6 @@ public partial class App : Application
 
     private void SetupTrayIcon()
     {
-        // ms-appx:// 在 unpackaged 应用中会崩溃，用绝对文件路径加载 .ico
         BitmapImage? iconSource = null;
         try
         {
@@ -105,37 +135,19 @@ public partial class App : Application
             if (System.IO.File.Exists(icoPath))
                 iconSource = new BitmapImage(new Uri(icoPath));
         }
-        catch { /* 图标加载失败不影响功能 */ }
+        catch { }
 
         _trayIcon = new TaskbarIcon
         {
             ToolTipText        = "VLESS Client",
             IconSource         = iconSource,
+            LeftClickCommand   = new RelayCommand(() => ShowMainWindow()),
             DoubleClickCommand = new RelayCommand(() => ShowMainWindow()),
+            RightClickCommand  = new RelayCommand(ShowNativeContextMenu),
         };
 
-        // ── 右键菜单（标准 WinUI MenuFlyout / MenuFlyoutItem）─────────────
-        var showItem   = new MenuFlyoutItem { Text = "显示主窗口" };
-        showItem.Click += (_, _) => ShowMainWindow();
-
-        _toggleMenuItem = new MenuFlyoutItem { Text = "开始连接" };
-        _toggleMenuItem.Click += async (_, _) => await ToggleProxyAsync();
-
-        var exitItem = new MenuFlyoutItem { Text = "退出" };
-        exitItem.Click += async (_, _) => await ExitAsync();
-
-        var menu = new MenuFlyout();
-        menu.Items.Add(showItem);
-        menu.Items.Add(_toggleMenuItem);
-        menu.Items.Add(new MenuFlyoutSeparator());
-        menu.Items.Add(exitItem);
-
-        _trayIcon.ContextFlyout = menu;
-
-        // unpackaged WinUI 应用必须显式调用 ForceCreate，否则托盘图标不会出现
         _trayIcon.ForceCreate(enablesEfficiencyMode: false);
 
-        // ── 监听代理状态，更新提示文字和菜单项 ───────────────────────────
         Proxy.StatusChanged += status =>
         {
             MainWin?.DispatcherQueue.TryEnqueue(() =>
@@ -148,10 +160,41 @@ public partial class App : Application
                     ProxyStatus.Error    => "错误",
                     _                   => "已断开"
                 };
-                _trayIcon!.ToolTipText    = $"VLESS Client — {label}";
-                _toggleMenuItem!.Text     = status == ProxyStatus.Running ? "断开连接" : "开始连接";
+                _trayIcon!.ToolTipText = $"VLESS Client — {label}";
+                _toggleMenuText        = status == ProxyStatus.Running ? "断开连接" : "开始连接";
             });
         };
+    }
+
+    // ── 原生 Win32 右键菜单 ────────────────────────────────────────────────────
+
+    private async void ShowNativeContextMenu()
+    {
+        IntPtr hMenu = CreatePopupMenu();
+        AppendMenuW(hMenu, MF_STRING, 1, "显示主窗口");
+        AppendMenuW(hMenu, MF_STRING, 2, _toggleMenuText);
+        AppendMenuW(hMenu, MF_SEPARATOR, 0, "");
+        AppendMenuW(hMenu, MF_STRING, 3, "退出");
+
+        GetCursorPos(out var pt);
+
+        // TrackPopupMenu 需要置于前台，否则点击空白处无法关闭菜单
+        IntPtr hwnd = IntPtr.Zero;
+        if (MainWin != null)
+            hwnd = WinRT.Interop.WindowNative.GetWindowHandle(MainWin);
+        SetForegroundWindow(hwnd);
+
+        uint flags = TPM_RETURNCMD | TPM_NONOTIFY | TPM_RIGHTALIGN;
+        int result = TrackPopupMenu(hMenu, flags, pt.X, pt.Y, 0, hwnd, IntPtr.Zero);
+        DestroyMenu(hMenu);
+
+        switch (result)
+        {
+            case 1: ShowMainWindow(); break;
+            case 2: await ToggleProxyAsync(); break;
+            case 3: await ExitAsync(); break;
+            case 0: break; // 用户点击菜单外部取消
+        }
     }
 
     // ── 辅助方法 ──────────────────────────────────────────────────────────────
@@ -173,6 +216,8 @@ public partial class App : Application
 
     private async Task ExitAsync()
     {
+        if (MainWin != null)
+            MainWin.IsExiting = true;
         await Proxy.StopAsync();
         _trayIcon?.Dispose();
         await Proxy.DisposeAsync();
