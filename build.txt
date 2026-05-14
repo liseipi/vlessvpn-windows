@@ -1,3 +1,10 @@
+测试过程：
+1. 点击 生成 -> 清理解决方案
+2. 点击 生成 -> 重新生成解决方案
+3. 点击 生成 -> 清理 vlessClien
+4. 点击 生成 -> 重新生成 vlessClien
+5. 点击 生成 -> 打包 vlessClien
+
 第一步：发布应用
 
 1. Visual Studio 打开项目文件夹（或 .csproj）
