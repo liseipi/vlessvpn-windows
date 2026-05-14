@@ -4,6 +4,8 @@ bin/
 obj/
 Debug/
 Release/
+publish/
+scripts/installer/Output/
 
 # 用户设置
 *.user
