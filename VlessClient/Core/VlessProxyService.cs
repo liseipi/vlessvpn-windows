@@ -1,13 +1,8 @@
-using System;
 using System.Buffers.Binary;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Net.WebSockets;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using VlessClient.Models;
 
 namespace VlessClient.Core;
@@ -196,9 +191,9 @@ public sealed class VlessProxyService : IDisposable
         {
             // 用 BufferedStream 避免逐字节 ReadAsync，改为批量读取后在 buffer 中查找 \r\n\r\n
             var headerBuf = new byte[8192];
-            headerBuf[0]  = firstByte;
+            headerBuf[0] = firstByte;
             int totalRead = 1;
-            int eoh       = -1; // end-of-header index
+            int eoh = -1; // end-of-header index
 
             while (totalRead < headerBuf.Length)
             {
@@ -214,23 +209,23 @@ public sealed class VlessProxyService : IDisposable
 
             if (eoh < 0) { client.Close(); return; } // 请求头过大或格式异常
 
-            string raw   = Encoding.ASCII.GetString(headerBuf, 0, eoh);
+            string raw = Encoding.ASCII.GetString(headerBuf, 0, eoh);
             // eoh + 4 之后是请求体（对 CONNECT 无意义，对普通 HTTP 可能有 body）
             int bodyStart = eoh + 4;
             int preReadBodyLen = totalRead - bodyStart;
 
             var lines = raw.Split(new[] { "\r\n" }, StringSplitOptions.None);
-            var rl    = lines[0].Split(' ');
+            var rl = lines[0].Split(' ');
             if (rl.Length < 2) { client.Close(); return; }
 
             string method = rl[0].ToUpperInvariant();
-            string url    = rl[1];
+            string url = rl[1];
 
             if (method == "CONNECT")
             {
-                int idx  = url.LastIndexOf(':');
+                int idx = url.LastIndexOf(':');
                 string h = idx > 0 ? url[..idx] : url;
-                int    p = (idx > 0 && int.TryParse(url[(idx + 1)..], out var pp)) ? pp : 443;
+                int p = (idx > 0 && int.TryParse(url[(idx + 1)..], out var pp)) ? pp : 443;
 
                 await stream.WriteAsync(Encoding.ASCII.GetBytes("HTTP/1.1 200 Connection Established\r\n\r\n"), ct);
 
@@ -259,7 +254,7 @@ public sealed class VlessProxyService : IDisposable
                 catch { client.Close(); return; }
 
                 string host = u.Host;
-                int    port = u.Port > 0 ? u.Port : (u.Scheme == "https" ? 443 : 80);
+                int port = u.Port > 0 ? u.Port : (u.Scheme == "https" ? 443 : 80);
 
                 // 读取剩余 body（请求头之后可能已预读了部分 body）
                 int bodyLen = 0;
@@ -293,8 +288,8 @@ public sealed class VlessProxyService : IDisposable
                 fwdSb.Append("\r\n");
 
                 var vlessHdr = BuildVlessHeader(_cfg.Uuid, host, port);
-                var rawReq   = Encoding.UTF8.GetBytes(fwdSb.ToString());
-                var pkt      = ConcatBytes(vlessHdr, rawReq, body);
+                var rawReq = Encoding.UTF8.GetBytes(fwdSb.ToString());
+                var pkt = ConcatBytes(vlessHdr, rawReq, body);
                 await ws.SendAsync(pkt, WebSocketMessageType.Binary, true, ct);
                 await RelayHttpResponseAsync(stream, ws, ct);
             }
@@ -335,7 +330,7 @@ public sealed class VlessProxyService : IDisposable
     private static async Task RelayAsync(NetworkStream stream, ClientWebSocket ws, CancellationToken outerCt)
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(outerCt);
-        var respBuf     = Array.Empty<byte>();
+        var respBuf = Array.Empty<byte>();
         var respSkipped = false;
         var respHdrSize = -1;
 
@@ -403,8 +398,8 @@ public sealed class VlessProxyService : IDisposable
 
     private static async Task RelayHttpResponseAsync(NetworkStream stream, ClientWebSocket ws, CancellationToken ct)
     {
-        var recvBuf      = new byte[65536];
-        var vlessBuf     = Array.Empty<byte>();
+        var recvBuf = new byte[65536];
+        var vlessBuf = Array.Empty<byte>();
         var vlessSkipped = false;
         var vlessHdrSize = -1;
 
@@ -442,10 +437,10 @@ public sealed class VlessProxyService : IDisposable
     private async Task<ClientWebSocket> OpenTunnelAsync(CancellationToken ct)
     {
         var ws = new ClientWebSocket();
-        ws.Options.SetRequestHeader("Host",          _cfg.WsHost);
-        ws.Options.SetRequestHeader("User-Agent",    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+        ws.Options.SetRequestHeader("Host", _cfg.WsHost);
+        ws.Options.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
         ws.Options.SetRequestHeader("Cache-Control", "no-cache");
-        ws.Options.SetRequestHeader("Pragma",        "no-cache");
+        ws.Options.SetRequestHeader("Pragma", "no-cache");
 
         if (!_cfg.RejectUnauthorized)
             ws.Options.RemoteCertificateValidationCallback = (_, _, _, _) => true;

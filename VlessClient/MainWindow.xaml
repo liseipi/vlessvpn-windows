@@ -179,6 +179,23 @@
                                        SpinButtonPlacementMode="Inline"/>
                         </StackPanel>
 
+                        <!-- 系统代理 -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="系统代理" FontSize="13" FontWeight="SemiBold"/>
+                                <TextBlock Text="设置 Windows 系统代理（浏览器等应用生效）" FontSize="11"
+                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+                            <ToggleSwitch x:Name="SystemProxyToggle" Grid.Column="1"
+                                          OffContent="" OnContent=""
+                                          Toggled="SystemProxyToggle_Toggled"/>
+                        </Grid>
+
                         <!-- LAN 共享 -->
                         <Grid>
                             <Grid.ColumnDefinitions>

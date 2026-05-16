@@ -1,21 +1,18 @@
-using System;
-using System.IO;
 using System.Text.Json;
-using System.Threading.Tasks;
 using VlessClient.Models;
 
 namespace VlessClient.Services;
 
 public class SettingsService
 {
-    private static readonly string ConfigDir  = Path.Combine(
+    private static readonly string ConfigDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "VlessClient");
     private static readonly string ConfigPath = Path.Combine(ConfigDir, "settings.json");
 
     private static readonly JsonSerializerOptions _opts = new()
     {
-        WriteIndented       = true,
+        WriteIndented = true,
         PropertyNameCaseInsensitive = true
     };
 

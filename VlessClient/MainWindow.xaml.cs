@@ -1,10 +1,5 @@
-using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using H.NotifyIcon;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
@@ -70,9 +65,9 @@ public sealed partial class MainWindow : Window
 
     private void BindEvents()
     {
-        App.Proxy.StatusChanged           += OnProxyStatusChanged;
-        App.Proxy.LogMessage              += OnProxyLog;
-        App.Proxy.ConnectionCountChanged  += OnConnectionCountChanged;
+        App.Proxy.StatusChanged += OnProxyStatusChanged;
+        App.Proxy.LogMessage += OnProxyLog;
+        App.Proxy.ConnectionCountChanged += OnConnectionCountChanged;
     }
 
     private void LoadSettings()
@@ -83,7 +78,7 @@ public sealed partial class MainWindow : Window
         // 配置列表
         _configs.Clear();
         foreach (var c in s.Configs) _configs.Add(c);
-        ConfigSelector.ItemsSource    = _configs;
+        ConfigSelector.ItemsSource = _configs;
         ConfigSelector.DisplayMemberPath = "Name";
 
         if (_configs.Count > 0)
@@ -99,16 +94,19 @@ public sealed partial class MainWindow : Window
         // LAN 共享
         ShareOverLanToggle.IsOn = s.ShareOverLan;
 
+        // 系统代理
+        SystemProxyToggle.IsOn = s.EnableSystemProxy;
+
         // TUN
-        TunToggle.IsOn      = s.EnableTun;
+        TunToggle.IsOn = s.EnableTun;
         TunSettings.Visibility = s.EnableTun ? Visibility.Visible : Visibility.Collapsed;
-        TunAddressBox.Text  = s.TunAddress;
-        TunPrefixBox.Value  = s.TunPrefix;
-        TunDnsBox.Text      = s.TunDns;
+        TunAddressBox.Text = s.TunAddress;
+        TunPrefixBox.Value = s.TunPrefix;
+        TunDnsBox.Text = s.TunDns;
 
         // 系统
-        AutoStartToggle.IsOn         = s.AutoStart;
-        MinimizeToTrayToggle.IsOn    = s.StartMinimized;
+        AutoStartToggle.IsOn = s.AutoStart;
+        MinimizeToTrayToggle.IsOn = s.StartMinimized;
 
         _suppressEvents = false;
     }
@@ -120,6 +118,8 @@ public sealed partial class MainWindow : Window
         var proxy = App.Proxy;
         if (proxy.Status == ProxyStatus.Running || proxy.Status == ProxyStatus.Starting)
         {
+            if (SystemProxyToggle.IsOn)
+                SystemProxyService.Disable();
             await proxy.StopAsync();
         }
         else
@@ -133,14 +133,17 @@ public sealed partial class MainWindow : Window
 
             // 应用当前端口设置
             cfg = cfg.Clone();
-            cfg.ListenPort   = (int)Socks5PortBox.Value;
+            cfg.ListenPort = (int)Socks5PortBox.Value;
             cfg.ShareOverLan = ShareOverLanToggle.IsOn;
-            cfg.EnableTun    = TunToggle.IsOn;
+            cfg.EnableTun = TunToggle.IsOn;
             cfg.TunAddress = TunAddressBox.Text;
-            cfg.TunPrefix  = (int)TunPrefixBox.Value;
-            cfg.TunDns     = TunDnsBox.Text;
+            cfg.TunPrefix = (int)TunPrefixBox.Value;
+            cfg.TunDns = TunDnsBox.Text;
 
             await proxy.StartAsync(cfg, TunToggle.IsOn);
+
+            if (SystemProxyToggle.IsOn)
+                SystemProxyService.Apply("127.0.0.1", (int)Socks5PortBox.Value);
         }
     }
 
@@ -148,23 +151,27 @@ public sealed partial class MainWindow : Window
 
     private void OnProxyStatusChanged(ProxyStatus status)
     {
+        // 代理断开时自动关闭系统代理
+        if (status == ProxyStatus.Stopped || status == ProxyStatus.Error)
+            SystemProxyService.Disable();
+
         DispatcherQueue.TryEnqueue(() =>
         {
             StatusText.Text = status switch
             {
-                ProxyStatus.Running  => "已连接",
+                ProxyStatus.Running => "已连接",
                 ProxyStatus.Starting => "连接中...",
                 ProxyStatus.Stopping => "断开中...",
-                ProxyStatus.Error    => "连接错误",
-                _                   => "未连接"
+                ProxyStatus.Error => "连接错误",
+                _ => "未连接"
             };
 
             var color = status switch
             {
-                ProxyStatus.Running  => Color.FromArgb(255, 34, 197, 94),   // green
+                ProxyStatus.Running => Color.FromArgb(255, 34, 197, 94),   // green
                 ProxyStatus.Starting => Color.FromArgb(255, 245, 158, 11),  // amber
-                ProxyStatus.Error    => Color.FromArgb(255, 239, 68, 68),   // red
-                _                   => Color.FromArgb(255, 239, 68, 68)     // red
+                ProxyStatus.Error => Color.FromArgb(255, 239, 68, 68),   // red
+                _ => Color.FromArgb(255, 239, 68, 68)     // red
             };
             StatusDot.Background = new SolidColorBrush(color);
             FooterDot.Background = new SolidColorBrush(color);
@@ -174,15 +181,15 @@ public sealed partial class MainWindow : Window
             ToggleButton.Background = new SolidColorBrush(running
                 ? Color.FromArgb(255, 34, 197, 94)
                 : Color.FromArgb(255, 239, 68, 68));
-            ToggleIcon.Glyph  = running ? "\uE71A" : "\uE768";   // Stop / Play
+            ToggleIcon.Glyph = running ? "\uE71A" : "\uE768";   // Stop / Play
             ToggleButton.IsEnabled = status != ProxyStatus.Starting && status != ProxyStatus.Stopping;
 
             FooterText.Text = status switch
             {
-                ProxyStatus.Running  => $"代理运行中 → socks5://127.0.0.1:{(int)Socks5PortBox.Value}",
+                ProxyStatus.Running => $"代理运行中 → socks5://127.0.0.1:{(int)Socks5PortBox.Value}",
                 ProxyStatus.Starting => "正在启动...",
-                ProxyStatus.Error    => "启动失败，请检查配置",
-                _                   => "就绪"
+                ProxyStatus.Error => "启动失败，请检查配置",
+                _ => "就绪"
             };
         });
     }
@@ -215,8 +222,8 @@ public sealed partial class MainWindow : Window
 
     private void ClearLogBtn_Click(object sender, RoutedEventArgs e)
     {
-        LogText.Text   = "";
-        _logLineCount  = 0;
+        LogText.Text = "";
+        _logLineCount = 0;
     }
 
     // ── 配置管理 ──────────────────────────────────────────────────────────────
@@ -240,32 +247,32 @@ public sealed partial class MainWindow : Window
     private void ShowConfigDetail(VlessConfig cfg)
     {
         ConfigDetail.Visibility = Visibility.Visible;
-        DetailServer.Text       = cfg.Server;
-        DetailPort.Text         = cfg.Port.ToString();
-        DetailNetwork.Text      = $"{cfg.Network.ToUpperInvariant()} / {cfg.Encryption}";
-        DetailSecurity.Text     = cfg.Security.ToUpperInvariant();
-        DetailListenPort.Text   = $":{cfg.ListenPort}";
+        DetailServer.Text = cfg.Server;
+        DetailPort.Text = cfg.Port.ToString();
+        DetailNetwork.Text = $"{cfg.Network.ToUpperInvariant()} / {cfg.Encryption}";
+        DetailSecurity.Text = cfg.Security.ToUpperInvariant();
+        DetailListenPort.Text = $":{cfg.ListenPort}";
     }
 
     private async void ImportBtn_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new ContentDialog
         {
-            Title             = "导入 VLESS 配置",
+            Title = "导入 VLESS 配置",
             PrimaryButtonText = "导入",
-            CloseButtonText   = "取消",
-            DefaultButton     = ContentDialogButton.Primary,
-            XamlRoot          = Content.XamlRoot
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot
         };
 
         var tb = new TextBox
         {
             PlaceholderText = "粘贴 vless:// 链接（每行一个）",
-            AcceptsReturn   = true,
-            Height          = 160,
-            TextWrapping    = TextWrapping.Wrap,
-            FontFamily      = new FontFamily("Consolas"),
-            FontSize        = 12
+            AcceptsReturn = true,
+            Height = 160,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 12
         };
         dialog.Content = tb;
 
@@ -299,18 +306,18 @@ public sealed partial class MainWindow : Window
         var uri = cfg.ToUri();
         var dialog = new ContentDialog
         {
-            Title             = "导出配置",
+            Title = "导出配置",
             PrimaryButtonText = "复制",
-            CloseButtonText   = "关闭",
-            XamlRoot          = Content.XamlRoot
+            CloseButtonText = "关闭",
+            XamlRoot = Content.XamlRoot
         };
         var tb = new TextBox
         {
-            Text            = uri,
-            IsReadOnly      = true,
-            TextWrapping    = TextWrapping.Wrap,
-            FontFamily      = new FontFamily("Consolas"),
-            FontSize        = 11
+            Text = uri,
+            IsReadOnly = true,
+            TextWrapping = TextWrapping.Wrap,
+            FontFamily = new FontFamily("Consolas"),
+            FontSize = 11
         };
         dialog.Content = tb;
         var result = await dialog.ShowAsync();
@@ -335,12 +342,12 @@ public sealed partial class MainWindow : Window
 
         var dialog = new ContentDialog
         {
-            Title             = "删除配置",
-            Content           = $"确定删除「{cfg.Name}」？",
+            Title = "删除配置",
+            Content = $"确定删除「{cfg.Name}」？",
             PrimaryButtonText = "删除",
-            CloseButtonText   = "取消",
-            DefaultButton     = ContentDialogButton.Close,
-            XamlRoot          = Content.XamlRoot
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Close,
+            XamlRoot = Content.XamlRoot
         };
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
 
@@ -356,11 +363,11 @@ public sealed partial class MainWindow : Window
     {
         var dialog = new ContentDialog
         {
-            Title             = existing == null ? "新建配置" : "编辑配置",
+            Title = existing == null ? "新建配置" : "编辑配置",
             PrimaryButtonText = "保存",
-            CloseButtonText   = "取消",
-            DefaultButton     = ContentDialogButton.Primary,
-            XamlRoot          = Content.XamlRoot
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Primary,
+            XamlRoot = Content.XamlRoot
         };
 
         var panel = new StackPanel { Spacing = 12, Width = 400 };
@@ -375,22 +382,22 @@ public sealed partial class MainWindow : Window
             return tb;
         }
 
-        var nameBox    = MakeField("配置名称",  existing?.Name    ?? "");
-        var uriBox     = MakeField("VLESS URI (可选，填入后点保存自动解析)", "");
+        var nameBox = MakeField("配置名称", existing?.Name ?? "");
+        var uriBox = MakeField("VLESS URI (可选，填入后点保存自动解析)", "");
 
         panel.Children.Add(new TextBlock
         {
-            Text       = "— 或手动填写 —",
+            Text = "— 或手动填写 —",
             HorizontalAlignment = HorizontalAlignment.Center,
             Foreground = new SolidColorBrush(Color.FromArgb(120, 128, 128, 128))
         });
 
-        var serverBox  = MakeField("服务器",    existing?.Server   ?? "");
-        var portBox    = MakeField("端口",      (existing?.Port    ?? 443).ToString());
-        var uuidBox    = MakeField("UUID",      existing?.Uuid     ?? "");
-        var pathBox    = MakeField("WS 路径",   existing?.Path     ?? "/?ed=2560");
-        var sniBox     = MakeField("SNI",       existing?.Sni      ?? "");
-        var hostBox    = MakeField("WS Host",   existing?.WsHost   ?? "");
+        var serverBox = MakeField("服务器", existing?.Server ?? "");
+        var portBox = MakeField("端口", (existing?.Port ?? 443).ToString());
+        var uuidBox = MakeField("UUID", existing?.Uuid ?? "");
+        var pathBox = MakeField("WS 路径", existing?.Path ?? "/?ed=2560");
+        var sniBox = MakeField("SNI", existing?.Sni ?? "");
+        var hostBox = MakeField("WS Host", existing?.WsHost ?? "");
 
         dialog.Content = new ScrollViewer { Content = panel, MaxHeight = 500 };
 
@@ -411,9 +418,9 @@ public sealed partial class MainWindow : Window
         {
             cfg = existing?.Clone() ?? new VlessConfig();
             cfg.Server = serverBox.Text.Trim();
-            cfg.Uuid   = uuidBox.Text.Trim();
-            cfg.Path   = pathBox.Text.Trim();
-            cfg.Sni    = sniBox.Text.Trim();
+            cfg.Uuid = uuidBox.Text.Trim();
+            cfg.Path = pathBox.Text.Trim();
+            cfg.Sni = sniBox.Text.Trim();
             cfg.WsHost = hostBox.Text.Trim();
             if (!int.TryParse(portBox.Text, out var p)) { await ShowErrorAsync("端口无效"); return; }
             cfg.Port = p;
@@ -446,6 +453,24 @@ public sealed partial class MainWindow : Window
         if (_suppressEvents) return;
         App.Settings.Settings.ShareOverLan = ShareOverLanToggle.IsOn;
         _ = App.Settings.SaveAsync();
+    }
+
+    // ── 系统代理 ────────────────────────────────────────────────────────────
+
+    private void SystemProxyToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_suppressEvents) return;
+        App.Settings.Settings.EnableSystemProxy = SystemProxyToggle.IsOn;
+        _ = App.Settings.SaveAsync();
+
+        // 代理已运行时实时生效
+        if (App.Proxy.Status == ProxyStatus.Running)
+        {
+            if (SystemProxyToggle.IsOn)
+                SystemProxyService.Apply("127.0.0.1", (int)Socks5PortBox.Value);
+            else
+                SystemProxyService.Disable();
+        }
     }
 
     // ── TUN 设置 ──────────────────────────────────────────────────────────────
@@ -518,10 +543,10 @@ public sealed partial class MainWindow : Window
     {
         var d = new ContentDialog
         {
-            Title             = "错误",
-            Content           = msg,
-            CloseButtonText   = "确定",
-            XamlRoot          = Content.XamlRoot
+            Title = "错误",
+            Content = msg,
+            CloseButtonText = "确定",
+            XamlRoot = Content.XamlRoot
         };
         await d.ShowAsync();
     }

@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using System.Web;
 
@@ -129,11 +127,11 @@ public class VlessConfig
 
             // 解析 Query 参数
             var qs = HttpUtility.ParseQueryString(query);
-            config.Security   = qs["security"]   ?? "none";
+            config.Security = qs["security"] ?? "none";
             config.Encryption = qs["encryption"] ?? "none";
-            config.Sni        = qs["sni"]         ?? config.Server;
-            config.Network    = qs["type"]         ?? "ws";
-            config.WsHost     = qs["host"]         ?? config.Server;
+            config.Sni = qs["sni"] ?? config.Server;
+            config.Network = qs["type"] ?? "ws";
+            config.WsHost = qs["host"] ?? config.Server;
 
             var rawPath = qs["path"] ?? "/";
             // ed 参数重组
@@ -163,10 +161,10 @@ public class VlessConfig
         var qs = new System.Collections.Specialized.NameValueCollection
         {
             ["encryption"] = Encryption,
-            ["security"]   = Security,
-            ["sni"]        = Sni,
-            ["type"]       = Network,
-            ["host"]       = WsHost,
+            ["security"] = Security,
+            ["sni"] = Sni,
+            ["type"] = Network,
+            ["host"] = WsHost,
         };
 
         // 拆解 path?ed=xxx
@@ -176,10 +174,10 @@ public class VlessConfig
         if (edIdx >= 0)
         {
             pathPart = Path[..edIdx];
-            edPart   = Path[(edIdx + 1)..]; // ed=xxx
+            edPart = Path[(edIdx + 1)..]; // ed=xxx
             var edVal = edPart.Split('=').Length > 1 ? edPart.Split('=')[1] : "";
             qs["path"] = pathPart;
-            qs["ed"]   = edVal;
+            qs["ed"] = edVal;
         }
         else
         {

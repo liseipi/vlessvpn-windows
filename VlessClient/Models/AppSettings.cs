@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace VlessClient.Models;
@@ -34,4 +33,7 @@ public class AppSettings
 
     [JsonPropertyName("shareOverLan")]
     public bool ShareOverLan { get; set; } = false;
+
+    [JsonPropertyName("enableSystemProxy")]
+    public bool EnableSystemProxy { get; set; } = false;
 }

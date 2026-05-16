@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using VlessClient.Core;
 using VlessClient.Models;
 
@@ -11,16 +8,16 @@ public enum ProxyStatus { Stopped, Starting, Running, Stopping, Error }
 public class ProxyManager : IDisposable, IAsyncDisposable
 {
     private VlessProxyService? _proxy;
-    private TunService?        _tun;
-    private VlessConfig?       _currentConfig;
-    private bool               _tunEnabled;
+    private TunService? _tun;
+    private VlessConfig? _currentConfig;
+    private bool _tunEnabled;
 
     public ProxyStatus Status { get; private set; } = ProxyStatus.Stopped;
     public int ActiveConnections { get; private set; }
 
     public event Action<ProxyStatus>? StatusChanged;
-    public event Action<string>?      LogMessage;
-    public event Action<int>?         ConnectionCountChanged;
+    public event Action<string>? LogMessage;
+    public event Action<int>? ConnectionCountChanged;
 
     // ── 启动 ────────────────────────────────────────────────────────────────
 
@@ -30,13 +27,13 @@ public class ProxyManager : IDisposable, IAsyncDisposable
 
         SetStatus(ProxyStatus.Starting);
         _currentConfig = config;
-        _tunEnabled     = enableTun;
+        _tunEnabled = enableTun;
 
         try
         {
             // 1. 启动 SOCKS5/HTTP 代理
             _proxy = new VlessProxyService(config);
-            _proxy.LogMessage           += OnLog;
+            _proxy.LogMessage += OnLog;
             _proxy.ConnectionCountChanged += c => { ActiveConnections = c; ConnectionCountChanged?.Invoke(c); };
             await _proxy.StartAsync();
             OnLog($"代理启动成功 → socks5://127.0.0.1:{config.ListenPort}");
@@ -101,7 +98,7 @@ public class ProxyManager : IDisposable, IAsyncDisposable
         // 推荐在应用退出时调用 DisposeAsync 或显式 await StopAsync()
         try { _tun?.Dispose(); } catch { }
         try { _proxy?.Dispose(); } catch { }
-        _tun   = null;
+        _tun = null;
         _proxy = null;
     }
 

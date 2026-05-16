@@ -1,8 +1,5 @@
-using System;
 using System.Diagnostics;
-using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 using VlessClient.Models;
 
 namespace VlessClient.Core;
@@ -38,7 +35,7 @@ public sealed class TunService : IDisposable
         var startInfo = new ProcessStartInfo
         {
             FileName = exePath,
-            Arguments = $"-c \"{configPath}\"",
+            Arguments = $"\"{configPath}\"",
             UseShellExecute = false,
             CreateNoWindow = true,
             RedirectStandardOutput = true,
@@ -53,8 +50,15 @@ public sealed class TunService : IDisposable
         _process.BeginOutputReadLine();
         _process.BeginErrorReadLine();
 
-        await Task.Delay(1500); // 等待启动
-        Log("hev-socks5-tunnel 已启动");
+        // 等待启动并检测进程是否崩溃
+        await Task.Delay(2000);
+        if (_process.HasExited)
+        {
+            var errMsg = $"hev-socks5-tunnel 启动失败，退出码: {_process.ExitCode}。请检查 TUN 日志或驱动 (wintun.dll) 是否正常。";
+            Log(errMsg);
+            throw new Exception(errMsg);
+        }
+        Log("hev-socks5-tunnel 已启动，TUN 全局模式工作中");
     }
 
     public async Task StopAsync()
@@ -80,10 +84,11 @@ public sealed class TunService : IDisposable
         var yaml = new StringBuilder();
         yaml.AppendLine("tunnel:");
         yaml.AppendLine("  name: VlessTUN");
-        yaml.AppendLine("  mtu: 8500");
+        yaml.AppendLine("  mtu: 1500");
         yaml.AppendLine($"  ipv4: {_config.TunAddress}/{_config.TunPrefix}");
-        yaml.AppendLine("  auto-route: false");
-        yaml.AppendLine("  strict-route: false");
+        yaml.AppendLine("  auto-route: true");
+        yaml.AppendLine("  strict-route: true");
+        yaml.AppendLine($"  dns: {_config.TunDns}");
 
         yaml.AppendLine("socks5:");
         yaml.AppendLine($"  address: 127.0.0.1");
@@ -97,7 +102,7 @@ public sealed class TunService : IDisposable
         yaml.AppendLine($"  log-file: {logFile}");
 
         var path = Path.Combine(Path.GetTempPath(), $"vless-tun-{DateTime.Now:HHmmss}.yaml");
-        File.WriteAllText(path, yaml.ToString(), Encoding.UTF8);
+        File.WriteAllText(path, yaml.ToString(), new UTF8Encoding(false));
         return path;
     }
 

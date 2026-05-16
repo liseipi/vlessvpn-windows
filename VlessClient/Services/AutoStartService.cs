@@ -1,11 +1,10 @@
-using System;
 using Microsoft.Win32;
 
 namespace VlessClient.Services;
 
 public static class AutoStartService
 {
-    private const string RegKey  = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
+    private const string RegKey = @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run";
     private const string AppName = "VlessClient";
 
     public static bool IsEnabled

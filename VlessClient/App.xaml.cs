@@ -1,11 +1,7 @@
-using System;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using System.Windows.Input;
 using H.NotifyIcon;
 using Microsoft.UI.Xaml;
-using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Imaging;
 using VlessClient.Services;
 
@@ -14,13 +10,13 @@ namespace VlessClient;
 public partial class App : Application
 {
     // new 关键字消除 CS0108 警告
-    public static new App          Current  => (App)Application.Current;
-    public static MainWindow?      MainWin  { get; private set; }
-    public static ProxyManager     Proxy    { get; } = new();
-    public static SettingsService  Settings { get; } = new();
+    public static new App Current => (App)Application.Current;
+    public static MainWindow? MainWin { get; private set; }
+    public static ProxyManager Proxy { get; } = new();
+    public static SettingsService Settings { get; } = new();
 
     private TaskbarIcon? _trayIcon;
-    private string       _toggleMenuText = "开始连接"; // 本地存储，原生菜单不再有 MenuFlyoutItem 引用
+    private string _toggleMenuText = "开始连接"; // 本地存储，原生菜单不再有 MenuFlyoutItem 引用
 
     // ═══ Win32 原生弹出菜单 P/Invoke ═══════════════════════════════════════
     [DllImport("user32.dll")]
@@ -44,10 +40,10 @@ public partial class App : Application
     [StructLayout(LayoutKind.Sequential)]
     private struct POINT { public int X; public int Y; }
 
-    private const uint MF_STRING    = 0x00000000;
+    private const uint MF_STRING = 0x00000000;
     private const uint MF_SEPARATOR = 0x00000800;
-    private const uint TPM_RETURNCMD  = 0x0100;
-    private const uint TPM_NONOTIFY   = 0x0080;
+    private const uint TPM_RETURNCMD = 0x0100;
+    private const uint TPM_NONOTIFY = 0x0080;
     private const uint TPM_RIGHTALIGN = 0x0008;
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -138,11 +134,11 @@ public partial class App : Application
 
         _trayIcon = new TaskbarIcon
         {
-            ToolTipText        = "VLESS Client",
-            IconSource         = iconSource,
-            LeftClickCommand   = new RelayCommand(() => ShowMainWindow()),
+            ToolTipText = "VLESS Client",
+            IconSource = iconSource,
+            LeftClickCommand = new RelayCommand(() => ShowMainWindow()),
             DoubleClickCommand = new RelayCommand(() => ShowMainWindow()),
-            RightClickCommand  = new RelayCommand(ShowNativeContextMenu),
+            RightClickCommand = new RelayCommand(ShowNativeContextMenu),
         };
 
         _trayIcon.ForceCreate(enablesEfficiencyMode: false);
@@ -153,14 +149,14 @@ public partial class App : Application
             {
                 var label = status switch
                 {
-                    ProxyStatus.Running  => "已连接",
+                    ProxyStatus.Running => "已连接",
                     ProxyStatus.Starting => "连接中...",
                     ProxyStatus.Stopping => "断开中...",
-                    ProxyStatus.Error    => "错误",
-                    _                   => "已断开"
+                    ProxyStatus.Error => "错误",
+                    _ => "已断开"
                 };
                 _trayIcon!.ToolTipText = $"VLESS Client — {label}";
-                _toggleMenuText        = status == ProxyStatus.Running ? "断开连接" : "开始连接";
+                _toggleMenuText = status == ProxyStatus.Running ? "断开连接" : "开始连接";
             });
         };
     }
@@ -242,5 +238,5 @@ internal sealed class RelayCommand(Action execute) : ICommand
     public event EventHandler? CanExecuteChanged;
 #pragma warning restore CS0067
     public bool CanExecute(object? _) => true;
-    public void Execute(object? _)    => execute();
+    public void Execute(object? _) => execute();
 }
