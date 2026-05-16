@@ -229,7 +229,7 @@ public sealed partial class MainWindow : Window
         {
             ShowConfigDetail(cfg);
             App.Settings.Settings.SelectedIndex = ConfigSelector.SelectedIndex;
-            App.Settings.Save();
+            _ = App.Settings.SaveAsync();
         }
         else
         {
@@ -445,7 +445,7 @@ public sealed partial class MainWindow : Window
     {
         if (_suppressEvents) return;
         App.Settings.Settings.ShareOverLan = ShareOverLanToggle.IsOn;
-        App.Settings.Save();
+        _ = App.Settings.SaveAsync();
     }
 
     // ── TUN 设置 ──────────────────────────────────────────────────────────────
@@ -455,7 +455,7 @@ public sealed partial class MainWindow : Window
         if (_suppressEvents) return;
         TunSettings.Visibility = TunToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
         App.Settings.Settings.EnableTun = TunToggle.IsOn;
-        App.Settings.Save();
+        _ = App.Settings.SaveAsync();
     }
 
     // ── 系统设置 ──────────────────────────────────────────────────────────────
@@ -474,14 +474,14 @@ public sealed partial class MainWindow : Window
             return;
         }
         App.Settings.Settings.AutoStart = AutoStartToggle.IsOn;
-        App.Settings.Save();
+        _ = App.Settings.SaveAsync();
     }
 
     private void MinimizeToTrayToggle_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
         App.Settings.Settings.StartMinimized = MinimizeToTrayToggle.IsOn;
-        App.Settings.Save();
+        _ = App.Settings.SaveAsync();
     }
 
     // ── 窗口关闭 → 最小化到托盘 ──────────────────────────────────────────────
