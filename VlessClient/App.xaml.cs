@@ -104,8 +104,7 @@ public partial class App : Application
     {
         MainWin = new MainWindow();
 
-        bool startMinimized = Environment.GetCommandLineArgs().Contains("--minimized")
-                              || Settings.Settings.StartMinimized;
+        bool startMinimized = Environment.GetCommandLineArgs().Contains("--minimized");
         if (!startMinimized)
             MainWin.Activate();
 
