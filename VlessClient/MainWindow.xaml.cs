@@ -153,7 +153,10 @@ public sealed partial class MainWindow : Window
     {
         // 代理断开时自动关闭系统代理
         if (status == ProxyStatus.Stopped || status == ProxyStatus.Error)
-            SystemProxyService.Disable();
+        {
+            try { SystemProxyService.Disable(); }
+            catch { /* 静默处理，避免 shutdown 期间异常 */ }
+        }
 
         DispatcherQueue.TryEnqueue(() =>
         {

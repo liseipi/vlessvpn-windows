@@ -18,6 +18,8 @@ public sealed class VlessProxyService : IDisposable
     private CancellationTokenSource? _cts;
     private Task? _acceptLoop;
     private int _activeConnections;
+    private string? _lastErrorKey;
+    private int _lastErrorCount;
     private bool _disposed;
 
     public event Action<string>? LogMessage;
@@ -167,7 +169,7 @@ public sealed class VlessProxyService : IDisposable
 
             ClientWebSocket ws;
             try { ws = await OpenTunnelAsync(ct); }
-            catch (Exception ex) { Log($"隧道连接失败 [{host}:{port}]: {ex.Message}"); client.Close(); return; }
+            catch (Exception ex) { LogTunnelError(host, port, ex); client.Close(); return; }
 
             await earlyTask;
 
@@ -275,7 +277,7 @@ public sealed class VlessProxyService : IDisposable
 
                 ClientWebSocket ws;
                 try { ws = await OpenTunnelAsync(ct); }
-                catch (Exception ex) { Log($"隧道连接失败 [{host}:{port}]: {ex.Message}"); client.Close(); return; }
+                catch (Exception ex) { LogTunnelError(host, port, ex); client.Close(); return; }
 
                 var fwdSb = new StringBuilder();
                 fwdSb.Append($"{method} {u.PathAndQuery} HTTP/1.1\r\n");
@@ -445,6 +447,9 @@ public sealed class VlessProxyService : IDisposable
         if (!_cfg.RejectUnauthorized)
             ws.Options.RemoteCertificateValidationCallback = (_, _, _, _) => true;
 
+        // 绕过系统代理，防止 WebSocket 回连自身形成死循环
+        ws.Options.Proxy = new WebProxy();
+
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(15));
         await ws.ConnectAsync(new Uri(BuildWsUrl()), timeout.Token);
@@ -575,6 +580,28 @@ public sealed class VlessProxyService : IDisposable
                 return i;
         }
         return -1;
+    }
+
+    private void LogTunnelError(string host, int port, Exception ex)
+    {
+        // 跳过正常的取消操作
+        if (ex is OperationCanceledException) return;
+
+        // 同主机错误去重：1秒内相同host只记录次数
+        var key = $"{host}:{port}:{ex.GetType().Name}";
+        if (key == _lastErrorKey)
+        {
+            _lastErrorCount++;
+            return;
+        }
+
+        // 输出上一次聚合错误
+        if (_lastErrorCount > 1)
+            LogMessage?.Invoke($"隧道连接失败 [{_lastErrorKey}] x{_lastErrorCount + 1}");
+
+        _lastErrorKey = key;
+        _lastErrorCount = 0;
+        Log($"隧道连接失败 [{host}:{port}]: {ex.Message}");
     }
 
     private void Log(string msg) => LogMessage?.Invoke(msg);
