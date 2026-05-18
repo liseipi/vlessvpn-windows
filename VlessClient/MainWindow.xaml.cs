@@ -108,6 +108,11 @@ public sealed partial class MainWindow : Window
         AutoStartToggle.IsOn = s.AutoStart;
         MinimizeToTrayToggle.IsOn = s.StartMinimized;
 
+        // 初始状态未连接，禁用需要连接才能操作的开关
+        SystemProxyToggle.IsEnabled = false;
+        ShareOverLanToggle.IsEnabled = false;
+        TunToggle.IsEnabled = false;
+
         _suppressEvents = false;
     }
 
@@ -186,6 +191,11 @@ public sealed partial class MainWindow : Window
                 : Color.FromArgb(255, 239, 68, 68));
             ToggleIcon.Glyph = running ? "\uE71A" : "\uE768";   // Stop / Play
             ToggleButton.IsEnabled = status != ProxyStatus.Starting && status != ProxyStatus.Stopping;
+
+            // \u4EC5\u5728\u8FDE\u63A5\u6210\u529F\u540E\u5141\u8BB8\u64CD\u4F5C\uFF1A\u7CFB\u7EDF\u4EE3\u7406 / \u5C40\u57DF\u7F51\u5171\u4EAB / TUN
+            SystemProxyToggle.IsEnabled = running;
+            ShareOverLanToggle.IsEnabled = running;
+            TunToggle.IsEnabled = running;
 
             FooterText.Text = status switch
             {
