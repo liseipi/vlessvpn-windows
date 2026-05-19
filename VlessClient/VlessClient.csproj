@@ -28,14 +28,17 @@
   <ItemGroup>
     <!-- hev-socks5-tunnel 可执行文件和依赖 -->
     <Content Include="runtimes\win-x64\hev-socks5-tunnel.exe">
+      <Link>hev-socks5-tunnel.exe</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
     </Content>
     <Content Include="runtimes\win-x64\wintun.dll">
+      <Link>wintun.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
     </Content>
     <Content Include="runtimes\win-x64\msys-2.0.dll">
+      <Link>msys-2.0.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
     </Content>

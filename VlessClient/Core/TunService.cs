@@ -57,6 +57,7 @@ public sealed class TunService : IDisposable
             CreateNoWindow = true,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
+            WorkingDirectory = Path.GetDirectoryName(exePath)!,
         };
 
         _process = new Process { StartInfo = startInfo };
@@ -261,17 +262,17 @@ public sealed class TunService : IDisposable
         var yaml = new StringBuilder();
         yaml.AppendLine("tunnel:");
         yaml.AppendLine("  name: VlessTUN");
-        yaml.AppendLine("  mtu: 1500");
+        yaml.AppendLine("  mtu: 8500");
         yaml.AppendLine($"  ipv4: {_config.TunAddress}");
 
         yaml.AppendLine("socks5:");
-        yaml.AppendLine($"  address: 127.0.0.1");
+        yaml.AppendLine("  address: 127.0.0.1");
         yaml.AppendLine($"  port: {_config.ListenPort}");
         yaml.AppendLine("  udp: full");
 
         var logFile = Path.Combine(Path.GetTempPath(), "vless-tun.log").Replace("\\", "/");
         yaml.AppendLine("misc:");
-        yaml.AppendLine("  log-level: debug");
+        yaml.AppendLine("  log-level: warn");
         yaml.AppendLine($"  log-file: {logFile}");
 
         var path = Path.Combine(Path.GetTempPath(), $"vless-tun-{DateTime.Now:HHmmss}.yaml");
