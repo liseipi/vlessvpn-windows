@@ -99,19 +99,10 @@ public sealed partial class MainWindow : Window
 
         // TUN
         TunToggle.IsOn = s.EnableTun;
-        TunSettings.Visibility = s.EnableTun ? Visibility.Visible : Visibility.Collapsed;
-        TunAddressBox.Text = s.TunAddress;
-        TunPrefixBox.Value = s.TunPrefix;
-        TunDnsBox.Text = s.TunDns;
 
         // 系统
         AutoStartToggle.IsOn = s.AutoStart;
         MinimizeToTrayToggle.IsOn = s.StartMinimized;
-
-        // 初始状态未连接，禁用需要连接才能操作的开关
-        SystemProxyToggle.IsEnabled = false;
-        ShareOverLanToggle.IsEnabled = false;
-        TunToggle.IsEnabled = false;
 
         _suppressEvents = false;
     }
@@ -141,14 +132,14 @@ public sealed partial class MainWindow : Window
             cfg.ListenPort = (int)Socks5PortBox.Value;
             cfg.ShareOverLan = ShareOverLanToggle.IsOn;
             cfg.EnableTun = TunToggle.IsOn;
-            cfg.TunAddress = TunAddressBox.Text;
-            cfg.TunPrefix = (int)TunPrefixBox.Value;
-            cfg.TunDns = TunDnsBox.Text;
 
             await proxy.StartAsync(cfg, TunToggle.IsOn);
 
             if (SystemProxyToggle.IsOn)
+            {
                 SystemProxyService.Apply("127.0.0.1", (int)Socks5PortBox.Value);
+                AppendLog($"系统代理已设置 → 127.0.0.1:{(int)Socks5PortBox.Value}");
+            }
         }
     }
 
@@ -156,8 +147,9 @@ public sealed partial class MainWindow : Window
 
     private void OnProxyStatusChanged(ProxyStatus status)
     {
-        // 代理断开时自动关闭系统代理
-        if (status == ProxyStatus.Stopped || status == ProxyStatus.Error)
+        // 代理断开时自动关闭系统代理（仅在被启用过的情况下）
+        var systemProxyWasOn = App.Settings.Settings.EnableSystemProxy;
+        if ((status == ProxyStatus.Stopped || status == ProxyStatus.Error) && systemProxyWasOn)
         {
             try { SystemProxyService.Disable(); }
             catch { /* 静默处理，避免 shutdown 期间异常 */ }
@@ -165,6 +157,9 @@ public sealed partial class MainWindow : Window
 
         DispatcherQueue.TryEnqueue(() =>
         {
+            if ((status == ProxyStatus.Stopped || status == ProxyStatus.Error) && systemProxyWasOn)
+                AppendLog("系统代理已清除");
+
             StatusText.Text = status switch
             {
                 ProxyStatus.Running => "已连接",
@@ -192,10 +187,11 @@ public sealed partial class MainWindow : Window
             ToggleIcon.Glyph = running ? "\uE71A" : "\uE768";   // Stop / Play
             ToggleButton.IsEnabled = status != ProxyStatus.Starting && status != ProxyStatus.Stopping;
 
-            // \u4EC5\u5728\u8FDE\u63A5\u6210\u529F\u540E\u5141\u8BB8\u64CD\u4F5C\uFF1A\u7CFB\u7EDF\u4EE3\u7406 / \u5C40\u57DF\u7F51\u5171\u4EAB / TUN
-            SystemProxyToggle.IsEnabled = running;
-            ShareOverLanToggle.IsEnabled = running;
-            TunToggle.IsEnabled = running;
+            // \u8FC7\u6E21\u72B6\u6001\u7981\u7528\uFF0C\u5176\u4F59\u72B6\u6001\u5747\u53EF\u64CD\u4F5C\uFF08\u8FDE\u63A5\u524D\u8BBE\u504F\u597D\uFF0C\u8FDE\u63A5\u540E\u7CFB\u7EDF\u4EE3\u7406\u5B9E\u65F6\u751F\u6548\u3001\u5C40\u57DF\u7F51/TUN \u9700\u91CD\u8FDE\uFF09
+            bool canToggle = status is ProxyStatus.Running or ProxyStatus.Stopped or ProxyStatus.Error;
+            SystemProxyToggle.IsEnabled = canToggle;
+            ShareOverLanToggle.IsEnabled = canToggle;
+            TunToggle.IsEnabled = canToggle;
 
             FooterText.Text = status switch
             {
@@ -466,6 +462,12 @@ public sealed partial class MainWindow : Window
         if (_suppressEvents) return;
         App.Settings.Settings.ShareOverLan = ShareOverLanToggle.IsOn;
         _ = App.Settings.SaveAsync();
+
+        var running = App.Proxy.Status == ProxyStatus.Running;
+        var suffix = running ? "（重新连接后生效）" : "";
+        AppendLog(ShareOverLanToggle.IsOn
+            ? $"局域网共享已启用{suffix}"
+            : $"局域网共享已关闭{suffix}");
     }
 
     // ── 系统代理 ────────────────────────────────────────────────────────────
@@ -476,13 +478,24 @@ public sealed partial class MainWindow : Window
         App.Settings.Settings.EnableSystemProxy = SystemProxyToggle.IsOn;
         _ = App.Settings.SaveAsync();
 
-        // 代理已运行时实时生效
         if (App.Proxy.Status == ProxyStatus.Running)
         {
             if (SystemProxyToggle.IsOn)
+            {
                 SystemProxyService.Apply("127.0.0.1", (int)Socks5PortBox.Value);
+                AppendLog($"系统代理已设置 → 127.0.0.1:{(int)Socks5PortBox.Value}");
+            }
             else
+            {
                 SystemProxyService.Disable();
+                AppendLog("系统代理已清除");
+            }
+        }
+        else
+        {
+            AppendLog(SystemProxyToggle.IsOn
+                ? "系统代理已设置（连接后生效）"
+                : "系统代理已清除（连接后生效）");
         }
     }
 
@@ -491,9 +504,14 @@ public sealed partial class MainWindow : Window
     private void TunToggle_Toggled(object sender, RoutedEventArgs e)
     {
         if (_suppressEvents) return;
-        TunSettings.Visibility = TunToggle.IsOn ? Visibility.Visible : Visibility.Collapsed;
         App.Settings.Settings.EnableTun = TunToggle.IsOn;
         _ = App.Settings.SaveAsync();
+
+        var running = App.Proxy.Status == ProxyStatus.Running;
+        var suffix = running ? "（重新连接后生效）" : "";
+        AppendLog(TunToggle.IsOn
+            ? $"TUN 全局模式已启用{suffix}"
+            : $"TUN 全局模式已关闭{suffix}");
     }
 
     // ── 系统设置 ──────────────────────────────────────────────────────────────

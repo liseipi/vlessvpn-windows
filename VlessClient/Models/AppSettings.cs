@@ -22,15 +22,6 @@ public class AppSettings
     [JsonPropertyName("listenPort")]
     public int ListenPort { get; set; } = 10808;
 
-    [JsonPropertyName("tunAddress")]
-    public string TunAddress { get; set; } = "198.18.0.1";
-
-    [JsonPropertyName("tunPrefix")]
-    public int TunPrefix { get; set; } = 15;
-
-    [JsonPropertyName("tunDns")]
-    public string TunDns { get; set; } = "1.1.1.1";
-
     [JsonPropertyName("shareOverLan")]
     public bool ShareOverLan { get; set; } = false;
 

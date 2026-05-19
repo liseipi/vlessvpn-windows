@@ -224,7 +224,16 @@ public partial class App : Application
         var s = Settings.Settings;
         if (s.Configs.Count == 0) { ShowMainWindow(); return; }
         int idx = Math.Clamp(s.SelectedIndex, 0, s.Configs.Count - 1);
-        await Proxy.StartAsync(s.Configs[idx], s.EnableTun);
+
+        var cfg = s.Configs[idx].Clone();
+        cfg.ListenPort = s.ListenPort;
+        cfg.ShareOverLan = s.ShareOverLan;
+        cfg.EnableTun = s.EnableTun;
+
+        await Proxy.StartAsync(cfg, s.EnableTun);
+
+        if (s.EnableSystemProxy)
+            SystemProxyService.Apply("127.0.0.1", cfg.ListenPort);
     }
 
     public TaskbarIcon? TrayIcon => _trayIcon;

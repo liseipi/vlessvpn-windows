@@ -230,34 +230,6 @@
                                           Toggled="TunToggle_Toggled"/>
                         </Grid>
 
-                        <Border x:Name="TunSettings" Visibility="Collapsed"
-                                CornerRadius="6" Padding="12"
-                                Background="{ThemeResource LayerFillColorDefaultBrush}">
-                            <StackPanel Spacing="8">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="84"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Margin="0,0,8,0" Spacing="4">
-                                        <TextBlock Text="TUN 地址" FontSize="11"
-                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                                        <TextBox x:Name="TunAddressBox" Text="198.18.0.1"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Spacing="4">
-                                        <TextBlock Text="前缀" FontSize="11"
-                                                   Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                                        <NumberBox x:Name="TunPrefixBox" Value="15"
-                                                   Minimum="1" Maximum="30"/>
-                                    </StackPanel>
-                                </Grid>
-                                <StackPanel Spacing="4">
-                                    <TextBlock Text="DNS" FontSize="11"
-                                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
-                                    <TextBox x:Name="TunDnsBox" Text="1.1.1.1"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
                     </StackPanel>
                 </Border>
 
